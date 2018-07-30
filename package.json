@@ -1,0 +1,78 @@
+{
+  "name": "ts-kafka-test",
+  "version": "1.0.0",
+  "description": "Testing CLI programs for Kafka with Node",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "author": "b@turbulent.ca",
+  "license": "Apache 2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.turbulent.ca/turbulent/ts-kafka-node.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.turbulent.ca"
+  },
+  "tags": [
+    "typescript"
+  ],
+  "dependencies": {
+    "@types/blessed": "^0.1.10",
+    "@types/faker": "^4.1.2",
+    "@types/kafka-node": "^2.0.7",
+    "blessed": "^0.1.81",
+    "blessed-contrib": "^4.8.5",
+    "commander": "^2.16.0",
+    "faker": "^4.1.0",
+    "kafka-node": "^2.6.1",
+    "pkg": "^4.3.3",
+    "reflect-metadata": "^0.1.12",
+    "tsconfig-paths": "^3.5.0",
+    "vorpal": "^1.12.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^23.1.0",
+    "@types/node": "^10.3.2",
+    "jest": "^23.1.0",
+    "nodemon": "^1.18.3",
+    "ts-jest": "^22.4.6",
+    "ts-node": "^6.1.1",
+    "tslint": "^5.10.0",
+    "typescript": "^2.9.1"
+  },
+  "jest": {
+    "verbose": true,
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json",
+      "node"
+    ],
+    "rootDir": "src",
+    "testRegex": ".spec.ts$",
+    "transform": {
+      "^.+\\.tsx?$": "ts-jest"
+    },
+    "coverageDirectory": "../coverage"
+  },
+  "nodemonConfig": {
+    "watch": [
+      "src"
+    ],
+    "ext": "ts",
+    "ignore": [
+      "src/**/*.spec.ts"
+    ],
+    "exec": "ts-node -r tsconfig-paths/register src/index.ts producer"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc --noUnusedLocals false",
+    "format": "prettier --write \"**/*.ts\"",
+    "test": "jest",
+    "test:cov": "jest --coverage",
+    "test:watch": "jest --logHeapUsage --watch",
+    "start:dev": "nodemon"
+  }
+}
