@@ -11,14 +11,17 @@ export class ProducerDashboard extends Dashboard {
   public donut?: any;
   public log?: any;
 
+  public performanceScreen: any;
+
   public partitionsOffset: { [x: number]: number } = {};
-  public rendering?: NodeJS.Timer;
+  public updating?: NodeJS.Timer;
   public stats: TimeStats  = {
     time: Date.now(),
     accumulator: 0,
     max: 0,
     cur: 0,
     entries: [],
+    perc: 0,
   };
 
   constructor(public producer: KafkaProducer) {
@@ -27,15 +30,15 @@ export class ProducerDashboard extends Dashboard {
     this.producer.on('sendError', this.onProducerSendError);
     this.producer.on('log', this.onProducerLog);
 
-    this.screen = blessed.screen();
-    this.screen.key(['escape', 'q', 'C-c'], (_chr, _key) => {
+    this.performanceScreen = blessed.screen();
+    this.performanceScreen.key(['escape', 'q', 'C-c'], (_chr, _key) => {
       return process.exit(0);
     });
 
     this.grid = new blessedContrib.grid({
       rows: 12,
       cols: 12,
-      screen: this.screen,
+      screen: this.performanceScreen,
     });
 
     // grid.set(row, col, rowSpan, colSpan, obj, opts)
@@ -78,17 +81,19 @@ export class ProducerDashboard extends Dashboard {
     });
 
     this.log = this.grid.set(6, 8, 6, 4, blessedContrib.log, {
-      bufferLength: 5,
+      bufferLength: 100,
       fg: 'green',
       selectedFg: 'green',
       label: 'Log',
     });
+
+    this.performanceScreen.render();
   }
 
   onProducerMessage = (message): void => {
 
-    if (this.rendering === undefined) {
-      this.startRendering();
+    if (this.updating === undefined) {
+      this.startUpdating();
     }
 
     const partitions = Object.entries(message[this.producer.topic]);
@@ -98,20 +103,22 @@ export class ProducerDashboard extends Dashboard {
     this.stats.accumulator++;
   }
 
-  onProducerSendError = (err): void => {
-    this.log.log(err);
+  onProducerSendError = (_err): void => {
+   //  this.log.log(String(err));
+    this.performanceScreen.render();
   }
 
   onProducerLog = (line: string): void => {
     this.log.log(line);
+    this.performanceScreen.render();
   }
 
-  startRendering = (): void => {
-    this.rendering = setInterval(this.render, 1000);
+  startUpdating = (): void => {
+    this.updating = setInterval(this.render, 1000);
   }
 
   stopRendering = (): void => {
-    this.rendering && clearInterval(this.rendering);
+    this.updating && clearInterval(this.updating);
   }
 
   render = (): void => {
@@ -174,6 +181,6 @@ export class ProducerDashboard extends Dashboard {
     });
 
     this.line.setData([ series1 ]);
-    this.screen.render();
+    this.performanceScreen.render();
   }
 }

@@ -40,25 +40,49 @@ export class KafkaProducer extends EventEmitter {
     });
 
     this.client.on('connect', this.onClientConnect);
+    this.client.on('error', this.onClientError);
+    this.client.on('close', this.onClientClose);
+    this.client.on('reconnect', this.onClientReconnect);
+    this.client.on('brokersChanged', this.onClientBrokerChanged);
+    this.client.on('socket_error', this.onClientSocketError);
 
     this.producer = new Producer(this.client, {
       ackTimeoutMs: 100,
       partitionerType: 2,
     });
-
     this.producer.on('ready', this.onProducerReady);
     this.producer.on('error', this.onProducerError);
 
     process.once('SIGINT', this.onSigInt);
   }
 
-  onSigInt = () => {
-    console.log('Trapped SIGINT');
-    this.producer.close(process.exit);
+  onClientSocketError = () => {
+    this.emit('log', 'Client Socket Error');
+  }
+
+  onClientBrokerChanged = () => {
+    this.emit('log', 'Client Broker Changed');
+  }
+
+  onClientReconnect = () => {
+    this.emit('log', 'Client Reconnected');
   }
 
   onClientConnect = () => {
-    this.emit('log', 'Connected');
+    this.emit('log', 'Client Connected');
+  }
+
+  onClientClose = () => {
+    this.emit('log', 'Client Closed');
+  }
+
+  onClientError = (err) => {
+    this.emit('log', `Connection Error ${err}`);
+  }
+
+  onSigInt = () => {
+    console.log('Trapped SIGINT');
+    this.producer.close(process.exit);
   }
 
   onProducerError = (err): void => {
@@ -75,22 +99,27 @@ export class KafkaProducer extends EventEmitter {
         process.exit(1);
       } else {
         this.emit('log', 'Topic created');
-        this.produce();
+        this.client.refreshMetadata([this.topic], this.produce);
       }
     });
+
   }
 
   produce = async (): Promise<void> => {
-    this.producer.send([
-      {
-        topic: this.topic,
-        messages: [
-          new KeyedMessage(v4(), faker.lorem.sentence()),
-        ],
-        partition: faker.random.arrayElement(this.partitionsIds),
-        attributes: 0,
-      },
-    ], this.onSend);
+    try {
+      this.producer.send([
+        {
+          topic: this.topic,
+          messages: [
+            new KeyedMessage(v4(), faker.lorem.sentence()),
+          ],
+          partition: faker.random.arrayElement(this.partitionsIds),
+          attributes: 0,
+        },
+      ], this.onSend);
+    } catch (e) {
+      this.emit('log', `Error ${e}`);
+    }
   }
 
   onSend = (err: any, data: any) => {

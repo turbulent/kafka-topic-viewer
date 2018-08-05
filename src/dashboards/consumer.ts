@@ -1,19 +1,42 @@
-import * as blessed from 'blessed';
-import * as blessedContrib from 'blessed-contrib';
-
 import { KafkaConsumer } from '../consumer';
-import { Dashboard, TimeStats } from '../dashboard';
+import { Dashboard, TimeStats, DataTable } from '../dashboard';
+import { ConsumerMessagesScreen } from '../screens/consumer.messages.screen';
+import { ConsumerStatusScreen } from '../screens/consumer.performance.screen';
+import { MessageScreen } from '../screens/message.screen';
+import { inspect } from 'util';
+
+type DashboardMode = 'status' | 'msglog';
+type ScreenOption = 'status' | 'msglog' | 'message';
+
+export interface MessageListEntry {
+  topic: string;
+  value: any;
+}
+
+interface ScreenProps {
+  maxMessages: number;
+  maxLogEntries: number;
+  onMessageSelect?: (i: number) => void;
+  messages: string[];
+  logs: string[];
+  messageDetails?: string[];
+  stats: TimeStats;
+  info: DataTable;
+  menuOptions: object;
+}
 
 export class ConsumerDashboard extends Dashboard {
 
-  public line?: any;
-  public grid?: any;
-  public table?: any;
-  public donut?: any;
-  public log?: any;
   public currentOffset: number = 0;
   public lastValue: any;
   public partition: number = 0;
+
+  protected messages: MessageListEntry[] = [];
+  protected logs: string[] = [];
+
+  public maxLogEntries = 500;
+  public maxMessages = 500;
+  public selectedMessage?: MessageListEntry;
 
   public stats: TimeStats = {
     time: Date.now(),
@@ -21,97 +44,135 @@ export class ConsumerDashboard extends Dashboard {
     max: 0,
     cur: 0,
     entries: [],
+    perc: 0,
   };
 
-  constructor(public consumer: KafkaConsumer) {
+  constructor(public consumer: KafkaConsumer, public mode: DashboardMode) {
     super();
     this.consumer.on('message', this.onConsumerMessage);
     this.consumer.on('log', this.onConsumerLog);
+    this.setScreen(this.mode);
+  }
 
-    this.screen = blessed.screen();
-    this.screen.key(['escape', 'q', 'C-c'], (_chr, _key) => {
-      return process.exit(0);
-    });
+  getScreenProps = (): ScreenProps => {
+    return {
+      maxMessages: this.maxMessages,
+      maxLogEntries: this.maxLogEntries,
+      onMessageSelect: this.onMessageSelect,
+      messages: this.messages.map(m => m.value),
+      logs: this.logs,
+      messageDetails: this.getMessageDetails(),
+      stats: this.stats,
+      info: this.getInfoTable(),
+      menuOptions: this.getMenuOptions(),
+    };
+  }
 
-    this.grid = new blessedContrib.grid({
-      rows: 12,
-      cols: 12,
-      screen: this.screen,
-    });
+  changeScreen = (screenSelect: ScreenOption): void => {
+    this.screen.destroy();
+    this.setScreen(screenSelect);
+  }
 
-    // grid.set(row, col, rowSpan, colSpan, obj, opts)
-    this.line = this.grid.set(0, 0, 6, 8, blessedContrib.line, {
-      label: 'Consumer statistics',
-      showLegend: true,
-      wholeNumbersOnly: false,
-      style: {
-        line: 'blue',
-        text: 'yellow',
-        baseline: 'black',
-      },
-    });
+  setScreen = (screenSelect: ScreenOption): void => {
+    switch (screenSelect) {
+      case 'message':
+        this.screen = new MessageScreen(this.getScreenProps());
+        break;
+      case 'msglog':
+        this.screen = new ConsumerMessagesScreen(this.getScreenProps());
+        break;
+      case 'status':
+        this.screen = new ConsumerStatusScreen(this.getScreenProps());
+        break;
+      default:
+        process.exit(2);
+    }
 
-    this.table = this.grid.set(6, 0, 6, 8, blessedContrib.table, {
-      keys: true,
-      fg: 'white',
-      selectedFg: 'white',
-      selectedBg: 'blue',
-      interactive: true,
-      label: 'Values',
-      border: { type: 'line', fg: 'cyan' },
-      columnSpacing: 2,
-      columnWidth: [ 18, 25 ],
-    });
+    this.screen.on('closed', () => this.changeScreen(this.mode));
+  }
 
-    this.donut = this.grid.set(0, 8, 6, 4, blessedContrib.donut, {
-      label: 'Throughtput msg/s',
-      radius: 8,
-      arcWidth: 3,
-      remainColor: 'black',
-      yPadding: 2,
-      data: [{
-        percent: 0,
-        label: `Max ${this.stats.max}`,
-        color: 'cyan',
-      }],
-    });
+  getInfoTable = (): DataTable => {
+    return {
+      headers: ['Metric', 'Value'],
+      data: [
+        ['Mode', 'Consumer'],
+        ['Kafka Broker', this.consumer.kafkaHost ],
+        ['Zookeeper', this.consumer.zookeeperHost ],
+        ['Consumer Group', this.consumer.consumerGroup ],
+        ['Topic', this.consumer.topic],
+        ['Partition', this.partition ],
+        ['Partition Offset', this.currentOffset ],
+      ],
+    };
+  }
 
-    this.log = this.grid.set(6, 8, 6, 4, blessedContrib.log, {
-      bufferLength: 5,
-      fg: 'green',
-      selectedFg: 'green',
-      label: 'Log',
-    });
+  getMessageDetails = (): string[] => {
+    if (!this.selectedMessage) {
+      return [];
+    }
+
+    const { value } = this.selectedMessage;
+    const dumped = inspect(JSON.parse(value), true, 5, true);
+    // tslint:disable-next-line
+    return dumped.split("\n");
+  }
+
+  onMessageSelect = (index: number): void => {
+    this.selectedMessage = this.messages[index];
+    this.changeScreen('message');
+  }
+
+  addMessage = (entry: MessageListEntry): void => {
+    if (this.messages.length > 500) {
+      this.messages.shift();
+    }
+    this.messages.push(entry);
+    this.render();
+  }
+
+  addLog = (line: string): void => {
+    if (this.logs.length > 500) {
+      this.logs.shift();
+    }
+    this.logs.push(line);
+    this.render();
   }
 
   onConsumerMessage = (message): void => {
-    if (this.rendering === undefined) {
-      this.startRendering();
+    if (this.updating === undefined) {
+      this.startUpdating();
     }
 
     this.stats.accumulator++;
     this.currentOffset = message.highWaterOffset;
     this.lastValue = message.value;
     this.partition = message.partition;
+
+    this.addMessage(message);
   }
 
   onConsumerError = (err): void => {
-    this.log.log(err);
+    this.addLog(err);
   }
 
   onConsumerLog = (line: string): void => {
-    this.log.log(line);
+    this.addLog(line);
   }
 
-  startRendering = (): void => {
-    this.rendering = setInterval(this.render, 1000);
+  startUpdating = (): void => {
+    this.updating = setInterval(this.updateStats, 1000);
   }
 
   stopRendering = (): void => {
-    this.rendering && clearInterval(this.rendering);
+    this.updating && clearInterval(this.updating);
   }
 
   render = (): void => {
+    this.screen.updateProps(this.getScreenProps());
+  }
+
+  updateStats = (): void => {
+
     const now = Date.now();
 
     if ((now - this.stats.time) >= 1000) {
@@ -135,34 +196,41 @@ export class ConsumerDashboard extends Dashboard {
 
     if (this.stats.entries.length > 0 && this.stats.max > 0) {
       const perc = this.stats.entries[this.stats.entries.length - 1].messages * 100 / this.stats.max;
-      this.donut.setData([{
-        percent: perc,
-        label: `Max ${this.stats.max} Cur: ${this.stats.cur}`,
-        color: 'cyan',
-      }]);
+      this.stats.perc = perc;
     }
 
-    const series1 = {
-      title: 'msg/s',
-      x: this.stats.entries.slice(-5).map((e) => `-${Math.floor((now - e.time) / 1000)}s`),
-      y: this.stats.entries.slice(-5).map(e => e.messages),
+    this.render();
+  }
+
+  getMenuOptions = (): object => {
+    return {
+      label: 'Consumer Menu',
+      mouse: true,
+      autoCommandKeys: false,
+      style: {
+        selected: {
+          bg: '#304d50',
+          bold: true,
+        },
+        item: {
+          bg: '#304d50',
+          bold: true,
+        },
+      },
+      items: {
+        Log: {
+          keys: ['1'],
+          callback: () => this.changeScreen('msglog'),
+        },
+        Status: {
+          keys: ['2'],
+          callback: () => this.changeScreen('status'),
+        },
+        Quit: {
+          keys: ['q'],
+          callback: () => process.exit(0),
+        },
+      },
     };
-
-    this.table.setData({
-      headers: ['Metric', 'Value'],
-      data: [
-        ['Mode', 'Consumer'],
-        ['Kafka Broker', this.consumer.kafkaHost ],
-        ['Zookeeper', this.consumer.zookeeperHost ],
-        ['Consumer Group', this.consumer.consumerGroup ],
-        ['Topic', this.consumer.topic],
-        ['Partition', this.partition ],
-        ['Partition Offset', this.currentOffset ],
-        ['Member Id', this.consumer.memberId ? this.consumer.memberId : 'N/A' ],
-      ],
-    });
-
-    this.line.setData([ series1 ]);
-    this.screen.render();
   }
 }

@@ -22,7 +22,7 @@
     "commander": "^2.16.0",
     "faker": "^4.1.0",
     "kafka-node": "^2.6.1",
-    "pkg": "^4.3.3",
+    "nexe": "^2.0.0-rc.31",
     "reflect-metadata": "^0.1.12",
     "tsconfig-paths": "^3.5.0"
   },
@@ -72,6 +72,7 @@
     "test": "jest",
     "test:cov": "jest --coverage",
     "test:watch": "jest --logHeapUsage --watch",
-    "start:dev": "nodemon"
+    "start:dev": "nodemon",
+    "package": "nexe dist/build.js -t linux-x64-10.7.0 --build"
   }
 }

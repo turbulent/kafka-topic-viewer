@@ -36,7 +36,13 @@ export class KafkaConsumer extends EventEmitter {
       fromOffset: 'earliest',
     }, [ this.topic ]);
 
-    this.consumer.client.on('connect', this.onClientConnected);
+    this.consumer.client.on('connect', this.onClientConnect);
+    this.consumer.client.on('error', this.onClientError);
+    this.consumer.client.on('close', this.onClientClose);
+    this.consumer.client.on('reconnect', this.onClientReconnect);
+    this.consumer.client.on('brokersChanged', this.onClientBrokerChanged);
+    this.consumer.client.on('socket_error', this.onClientSocketError);
+
     this.consumer.on('message', this.onMessage);
     this.consumer.on('error', this.onConsumerError);
     this.consumer.on('offsetOutOfRange', this.onConsumerOffsetOutOfRange);
@@ -50,8 +56,28 @@ export class KafkaConsumer extends EventEmitter {
     return this.consumer.memberId;
   }
 
-  onClientConnected = (): void => {
-    this.emit('log', 'Connected');
+  onClientSocketError = () => {
+    this.emit('log', 'Client Socket Error');
+  }
+
+  onClientBrokerChanged = () => {
+    this.emit('log', 'Client Broker Changed');
+  }
+
+  onClientReconnect = () => {
+    this.emit('log', 'Client Reconnected');
+  }
+
+  onClientConnect = () => {
+    this.emit('log', 'Client Connected');
+  }
+
+  onClientClose = () => {
+    this.emit('log', 'Client Closed');
+  }
+
+  onClientError = (err) => {
+    this.emit('log', `Connection Error ${err}`);
   }
 
   onSigInt = () => {
@@ -65,10 +91,6 @@ export class KafkaConsumer extends EventEmitter {
 
   onConsumerRebalanced = () => {
     this.emit('log', 'Rebalanced');
-  }
-
-  onClientConnect = () => {
-    this.emit('log', 'Connected');
   }
 
   onConsumerError = (err) => {

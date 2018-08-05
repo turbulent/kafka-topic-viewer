@@ -1,14 +1,14 @@
 
 export abstract class Dashboard {
   public screen?: any;
-  public rendering?: NodeJS.Timer;
+  public updating?: NodeJS.Timer;
 
-  startRendering = (): void => {
-    this.rendering = setInterval(this.render, 1000);
+  startUpdating = (): void => {
+    this.updating = setInterval(this.render, 1000);
   }
 
-  stopRendering = (): void => {
-    this.rendering && clearInterval(this.rendering);
+  stopUpdating = (): void => {
+    this.updating && clearInterval(this.updating);
   }
 
   abstract render: () => void;
@@ -25,4 +25,9 @@ export interface TimeStats {
   max: number;
   cur: number;
   entries: LineGraphEntry[];
+  perc: number;
+}
+export interface DataTable {
+  headers: string[];
+  data: Array<[string|number, string|number]>;
 }

@@ -31,6 +31,7 @@ export class CLIProgram {
       .option('-z, --zookeeper [value]', 'Specify the Zookeeper connection via hostname:port', 'localhost:2181')
       .option('-g, --group [value]', 'Specify the consumer group id', 'group.test.sc.lorem')
       .option('-t, --topic [value]', 'Specify the topic to produce message for', 'test.sc.lorem')
+      .option('-m, --mode [value]', 'Specify the operating mode', 'status')
       .action(this.onConsumer);
   }
 
@@ -42,7 +43,7 @@ export class CLIProgram {
 
   onConsumer = (cmd): void => {
     this.consumer = new KafkaConsumer(cmd.broker, cmd.zookeeper, cmd.group, cmd.topic);
-    this.dashboard = new ConsumerDashboard(this.consumer);
+    this.dashboard = new ConsumerDashboard(this.consumer, cmd.mode);
     this.consumer.initialize();
   }
 
