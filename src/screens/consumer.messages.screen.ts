@@ -7,11 +7,11 @@ interface Properties {
   currentOffset: number;
   maxMessages: number;
   maxLogEntries: number;
-  onMessageSelect?: (i: number) => void;
   messages: Message[];
   logs: string[];
   menuOptions: object;
   info: DataTable;
+  onMessageSelect?: (i: number) => void;
 }
 
 export class ConsumerMessagesScreen extends Screen {
