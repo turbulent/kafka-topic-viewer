@@ -109,6 +109,7 @@ export class ConsumerMessagesScreen extends Screen {
       mouse: true,
       keys: true,
       align: 'left',
+      pad: 0,
       style: {
         header: {
           bg: COLOR_HOVER,

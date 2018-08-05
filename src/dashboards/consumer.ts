@@ -108,7 +108,7 @@ export class ConsumerDashboard extends Dashboard {
   }
 
   onMessageSelect = (index: number): void => {
-    this.selectedMessage = this.messages[index];
+    this.selectedMessage = this.messages[index - 1];
     this.pushScreen(MessageScreen);
   }
 

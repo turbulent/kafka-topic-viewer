@@ -112,7 +112,7 @@ export class KafkaProducer extends EventEmitter {
         {
           topic: this.topic,
           messages: [
-            new KeyedMessage(v4(), faker.lorem.sentence()),
+            new KeyedMessage(v4(), JSON.stringify({ text: faker.lorem.sentence() })),
           ],
           partition: faker.random.arrayElement(this.partitionsIds),
           attributes: 0,
