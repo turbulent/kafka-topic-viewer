@@ -1,14 +1,14 @@
 import * as blessed from 'blessed';
 import * as blessedContrib from 'blessed-contrib';
 import { Screen } from '../screen';
-import { DataTable, COLOR_HOVER } from '../dashboard';
+import { DataTable, COLOR_HOVER, Message } from '../dashboard';
 
 interface Properties {
   currentOffset: number;
   maxMessages: number;
   maxLogEntries: number;
   onMessageSelect?: (i: number) => void;
-  messages: string[];
+  messages: Message[];
   logs: string[];
   menuOptions: object;
   info: DataTable;
@@ -23,6 +23,7 @@ export class ConsumerMessagesScreen extends Screen {
   public logList?: any;
   public msgList?: any;
   public table?: any;
+  public state: { offsets: number[] } = { offsets: [] };
 
   constructor() {
     super();
@@ -30,11 +31,23 @@ export class ConsumerMessagesScreen extends Screen {
 
   updateProps(props: Properties): void {
     this.props = props;
-    this.msgList.setItems(this.props.messages);
-    this.msgList.scrollTo(this.msgList.items.length);
+
+    this.msgList.label = 'Messages';
 
     this.logList.setItems(this.props.logs);
     this.logList.scrollTo(this.logList.items.length);
+
+    const offsets = this.props.messages.map(m => m.offset);
+    const diff = offsets.filter(o => this.state.offsets.indexOf(o) < 0);
+
+    if (diff.length > 0) {
+      this.msgList.setData([
+        ['Offset', 'Value'],
+        ...this.props.messages.map(m => ([ m.offset, m.value ])),
+      ]);
+      this.msgList.scrollTo(this.msgList.rows.length);
+      this.state.offsets = offsets;
+    }
 
     this.table.setData([
       this.props.info.headers,
@@ -65,45 +78,42 @@ export class ConsumerMessagesScreen extends Screen {
 
     this.menu = this.msgLogGrid.set(0, 0, 2, 12, blessed.listbar, this.props.menuOptions);
 
-    this.msgList = this.msgLogGrid.set(2, 4, 12, 8, blessed.list, {
-      label: 'Message Log',
+    this.msgList = this.msgLogGrid.set(2, 4, 12, 8, blessed.listtable, {
       scrollable: true,
-      alwaysScroll: true,
       interactive: true,
       mouse: true,
       keys: true,
+      width: 'shrink',
+      noCellBorders: true,
+      pad: 0,
+      data: [
+        ['Offset', 'Value'],
+      ],
+      align: 'left',
       style: {
-        selected: { fg: 'white', bg: 'blue' },
-        item: { fg: 'green', hover: { bg: COLOR_HOVER } },
+        header: {
+          bg: COLOR_HOVER,
+          fg: 'white',
+        },
+        cell: {
+          fg: 'green',
+          selected: { fg: 'white', bg: 'blue' },
+          hover: { bg: COLOR_HOVER },
+        },
       },
     });
-
-    // this.table = this.msgLogGrid.set(8, 0, 6, 4, blessedContrib.table, {
-    //   keys: false,
-    //   fg: 'white',
-    //   selectedFg: 'white',
-    //   selectedBg: 'blue',
-    //   interactive: true,
-    //   mouse: true,
-    //   label: 'Values',
-    //   border: { type: 'line', fg: 'cyan' },
-    //   style: {
-    //     selected: { fg: 'white', bg: 'blue' },
-    //     item: { fg: 'green', hover: { bg: COLOR_HOVER } },
-    //   },
-    //   columnSpacing: 2,
-    //   columnWidth: [ 18, 25 ],
-    // });
 
     this.table = this.msgLogGrid.set(8, 0, 6, 4, blessed.listtable, {
       scrollable: true,
       interactive: true,
       mouse: true,
       keys: true,
-      data: [],
       align: 'left',
       style: {
-        header: { bg: COLOR_HOVER, fg: 'white' },
+        header: {
+          bg: COLOR_HOVER,
+          fg: 'white',
+        },
         cell: {
           fg: 'green',
           hover: { bg: COLOR_HOVER },

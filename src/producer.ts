@@ -26,7 +26,8 @@ export class KafkaProducer extends EventEmitter {
     public kafkaHost: string,
     public zookeeperHost: string,
     public topic: string,
-    public partitions: number) {
+    public partitions: number,
+    public rate: number) {
       super();
       this.partitionsIds = (new Array(this.partitions)).fill(1).map((_e, i) => i);
   }
@@ -129,6 +130,10 @@ export class KafkaProducer extends EventEmitter {
       this.emit('sendError', err);
     }
 
-    this.produce();
+    if (this.rate <= 0) {
+      this.produce();
+    } else {
+      setTimeout(this.produce, 1000 / this.rate);
+    }
   }
 }

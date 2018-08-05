@@ -13,7 +13,7 @@ interface ScreenProps {
   maxMessages: number;
   maxLogEntries: number;
   onMessageSelect?: (i: number) => void;
-  messages: string[];
+  messages: Message[];
   logs: string[];
   messageDetails?: MessageDetails;
   stats: TimeStats;
@@ -59,7 +59,7 @@ export class ConsumerDashboard extends Dashboard {
       maxMessages: this.maxMessages,
       maxLogEntries: this.maxLogEntries,
       onMessageSelect: this.onMessageSelect,
-      messages: this.messages.map(m => m.value),
+      messages: this.messages,
       logs: this.logs,
       messageDetails: this.getMessageDetails(),
       stats: this.stats,

@@ -82,6 +82,7 @@ export interface DataTable {
 
 export interface Message {
   topic: string;
+  offset: number;
   value: any;
 }
 
