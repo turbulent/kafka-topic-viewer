@@ -23,7 +23,7 @@ export class CLIProgram {
       .option('-z, --zookeeper [value]', 'Specify the Zookeeper connection via hostname:port', 'localhost:2181')
       .option('-t, --topic [value]', 'Specify the topic to produce message for', 'test.sc.lorem')
       .option('-p, --partitions [value]', 'How many partition to shard on topic', 1)
-      .option('-r, --rate [value]', 'Maximm msg/s to produce (-1 for unlimited)', -1)
+      .option('-r, --rate [value]', 'Max msg/s to produce (-1 for unlimited)', -1)
       .action(this.onProducer);
 
     commander
