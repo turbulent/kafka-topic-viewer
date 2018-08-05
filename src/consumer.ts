@@ -3,12 +3,13 @@ import {
 } from 'kafka-node';
 import { EventEmitter } from 'events';
 
-type ConsumerEvents = 'message' | 'log';
+type ConsumerEvents = 'message' | 'log' | 'rebalancing' | 'rebalanced';
 
 export declare interface KafkaConsumer extends EventEmitter {
   on(event: 'message', listener: (data: any) => any): this;
   on(event: 'sendError', listener: (err: any) => any): this;
   on(event: 'log', listener: (line: string) => any): this;
+  on(event: 'rebalancing' | 'rebalanced', listener: () => any): this;
   emit(event: ConsumerEvents, ...rest);
 }
 
@@ -87,10 +88,12 @@ export class KafkaConsumer extends EventEmitter {
 
   onConsumerRebalancing = () => {
     this.emit('log', 'Rebalancing..');
+    this.emit('rebalancing');
   }
 
   onConsumerRebalanced = () => {
     this.emit('log', 'Rebalanced');
+    this.emit('rebalanced');
   }
 
   onConsumerError = (err) => {

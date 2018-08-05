@@ -1,31 +1,31 @@
 import * as blessed from 'blessed';
 import * as blessedContrib from 'blessed-contrib';
 import { Screen } from '../screen';
+import { DataTable, COLOR_HOVER } from '../dashboard';
 
 interface Properties {
+  currentOffset: number;
   maxMessages: number;
   maxLogEntries: number;
   onMessageSelect?: (i: number) => void;
   messages: string[];
   logs: string[];
   menuOptions: object;
+  info: DataTable;
 }
 
 export class ConsumerMessagesScreen extends Screen {
 
-  public props: Properties;
+  public props!: Properties;
 
   public menu?: any;
   public msgLogGrid?: any;
   public logList?: any;
   public msgList?: any;
-  public bigbox?: any;
+  public table?: any;
 
-  constructor(props: Properties) {
+  constructor() {
     super();
-    this.props = props;
-    this.setup();
-    this.updateProps(this.props);
   }
 
   updateProps(props: Properties): void {
@@ -35,15 +35,22 @@ export class ConsumerMessagesScreen extends Screen {
 
     this.logList.setItems(this.props.logs);
     this.logList.scrollTo(this.logList.items.length);
+
+    this.table.setData([
+      this.props.info.headers,
+      ...this.props.info.data,
+    ]);
+
     this.render();
   }
 
-  setup = (): void => {
+  setup(props: Properties): void {
 
+    this.props = props;
     this.screen = blessed.screen({
       smartCSR: true,
       fullUnicode: true,
-      title: 'Consumer Inspector >> Message Log',
+      title: 'Consumer >> Messages',
     });
 
     this.screen.key(['C-c'], (_ch, _key) => {
@@ -67,13 +74,41 @@ export class ConsumerMessagesScreen extends Screen {
       keys: true,
       style: {
         selected: { fg: 'white', bg: 'blue' },
-        item: { fg: 'green' },
+        item: { fg: 'green', hover: { bg: COLOR_HOVER } },
       },
     });
 
-    this.bigbox = this.msgLogGrid.set(8, 0, 6, 4, blessed.bigtext, {
-      content: 'ABCD',
-      label: 'Partition Offset',
+    // this.table = this.msgLogGrid.set(8, 0, 6, 4, blessedContrib.table, {
+    //   keys: false,
+    //   fg: 'white',
+    //   selectedFg: 'white',
+    //   selectedBg: 'blue',
+    //   interactive: true,
+    //   mouse: true,
+    //   label: 'Values',
+    //   border: { type: 'line', fg: 'cyan' },
+    //   style: {
+    //     selected: { fg: 'white', bg: 'blue' },
+    //     item: { fg: 'green', hover: { bg: COLOR_HOVER } },
+    //   },
+    //   columnSpacing: 2,
+    //   columnWidth: [ 18, 25 ],
+    // });
+
+    this.table = this.msgLogGrid.set(8, 0, 6, 4, blessed.listtable, {
+      scrollable: true,
+      interactive: true,
+      mouse: true,
+      keys: true,
+      data: [],
+      align: 'left',
+      style: {
+        header: { bg: COLOR_HOVER, fg: 'white' },
+        cell: {
+          fg: 'green',
+          hover: { bg: COLOR_HOVER },
+        },
+      },
     });
 
     this.logList = this.msgLogGrid.set(2, 0, 6, 4, blessedContrib.log, {

@@ -1,34 +1,34 @@
 import * as blessed from 'blessed';
 import * as blessedContrib from 'blessed-contrib';
 import { Screen } from '../screen';
+import { MessageDetails } from '../dashboard';
 
 interface Properties {
-  messageDetails?: string[];
+  messageDetails?: MessageDetails;
 }
 
 export class MessageScreen extends Screen {
 
-  public props: Properties;
+  public props!: Properties;
 
   public grid?: any;
   public messageBox?: any;
 
-  constructor(props: Properties) {
+  constructor() {
     super();
-    this.props = props;
-    this.setup();
-    this.updateProps(this.props);
   }
 
   updateProps(props: Properties): void {
     this.props = props;
     if (this.props.messageDetails) {
-      this.messageBox.setItems(this.props.messageDetails);
+      this.messageBox.setItems(this.props.messageDetails.lines);
     }
     this.render();
   }
 
-  setup = (): void => {
+  setup(props: Properties): void {
+
+    this.props = props;
 
     this.screen = blessed.screen({
       smartCSR: true,
@@ -45,12 +45,12 @@ export class MessageScreen extends Screen {
     });
 
     this.grid = new blessedContrib.grid({
-      rows: 1,
-      cols: 1,
+      rows: 14,
+      cols: 14,
       screen: this.screen,
     });
 
-    this.messageBox = this.grid.set(0, 0, 1, 1, blessed.list, {
+    this.messageBox = this.grid.set(0, 0, 14, 14, blessed.list, {
       label: 'Message Details',
       scrollable: true,
       alwaysScroll: true,

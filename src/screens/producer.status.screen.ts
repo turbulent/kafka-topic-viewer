@@ -1,17 +1,19 @@
 import * as blessed from 'blessed';
 import * as blessedContrib from 'blessed-contrib';
 import { Screen } from '../screen';
-import { TimeStats, DataTable } from '../dashboard';
+import { TimeStats, DataTable, COLOR_HOVER } from '../dashboard';
 
 interface Properties {
-  stats: TimeStats;
   maxLogEntries: number;
   logs: string[];
-  info: DataTable;
   menuOptions: object;
+  stats: TimeStats;
+  info: DataTable;
 }
 
-export class ConsumerStatusScreen extends Screen {
+export class ProducerStatusScreen extends Screen {
+
+  public props!: Properties;
 
   public screen;
   public menu?: any;
@@ -21,9 +23,8 @@ export class ConsumerStatusScreen extends Screen {
   public rateDonug?: any;
   public log?: any;
 
-  constructor(public props: Properties) {
+  constructor() {
     super();
-    this.setup();
   }
 
   updateProps(props: Properties): void {
@@ -50,20 +51,22 @@ export class ConsumerStatusScreen extends Screen {
     };
     this.lineGraph.setData([ series1 ]);
 
-    this.infoTable.setData({
-      headers: this.props.info.headers,
-      data: this.props.info.data,
-    });
+    this.infoTable.setData([
+      this.props.info.headers,
+      ...this.props.info.data,
+    ]);
 
     this.render();
   }
 
-  setup = (): void => {
+  setup(props: Properties): void {
+
+    this.props = props;
 
     this.screen = blessed.screen({
       smartCSR: true,
       fullUnicode: true,
-      title: 'Consumer Inspector >> Performance',
+      title: 'Producer >> Status',
     });
 
     this.screen.key(['C-c'], (_ch, _key) => {
@@ -90,16 +93,20 @@ export class ConsumerStatusScreen extends Screen {
       },
     });
 
-    this.infoTable = this.grid.set(8, 0, 6, 8, blessedContrib.table, {
-      keys: true,
-      fg: 'white',
-      selectedFg: 'white',
-      selectedBg: 'blue',
+    this.infoTable = this.grid.set(8, 0, 6, 8, blessed.listtable, {
+      scrollable: true,
       interactive: true,
-      label: 'Values',
-      border: { type: 'line', fg: 'cyan' },
-      columnSpacing: 2,
-      columnWidth: [ 18, 25 ],
+      mouse: true,
+      keys: true,
+      data: [],
+      align: 'left',
+      style: {
+        header: { bg: COLOR_HOVER, fg: 'white' },
+        cell: {
+          fg: 'green',
+          hover: { bg: COLOR_HOVER },
+        },
+      },
     });
 
     this.rateDonug = this.grid.set(2, 8, 6, 4, blessedContrib.donut, {

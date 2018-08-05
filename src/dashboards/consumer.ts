@@ -1,17 +1,13 @@
+import * as blessed from 'blessed';
+
 import { KafkaConsumer } from '../consumer';
-import { Dashboard, TimeStats, DataTable } from '../dashboard';
+import { Dashboard, TimeStats, DataTable, MessageDetails, Message } from '../dashboard';
 import { ConsumerMessagesScreen } from '../screens/consumer.messages.screen';
-import { ConsumerStatusScreen } from '../screens/consumer.performance.screen';
+import { ConsumerStatusScreen } from '../screens/consumer.status.screen';
 import { MessageScreen } from '../screens/message.screen';
 import { inspect } from 'util';
 
 type DashboardMode = 'status' | 'msglog';
-type ScreenOption = 'status' | 'msglog' | 'message';
-
-export interface MessageListEntry {
-  topic: string;
-  value: any;
-}
 
 interface ScreenProps {
   maxMessages: number;
@@ -19,10 +15,11 @@ interface ScreenProps {
   onMessageSelect?: (i: number) => void;
   messages: string[];
   logs: string[];
-  messageDetails?: string[];
+  messageDetails?: MessageDetails;
   stats: TimeStats;
   info: DataTable;
   menuOptions: object;
+  currentOffset: number;
 }
 
 export class ConsumerDashboard extends Dashboard {
@@ -31,12 +28,12 @@ export class ConsumerDashboard extends Dashboard {
   public lastValue: any;
   public partition: number = 0;
 
-  protected messages: MessageListEntry[] = [];
+  protected messages: Message[] = [];
   protected logs: string[] = [];
 
   public maxLogEntries = 500;
   public maxMessages = 500;
-  public selectedMessage?: MessageListEntry;
+  public selectedMessage?: Message;
 
   public stats: TimeStats = {
     time: Date.now(),
@@ -51,11 +48,14 @@ export class ConsumerDashboard extends Dashboard {
     super();
     this.consumer.on('message', this.onConsumerMessage);
     this.consumer.on('log', this.onConsumerLog);
-    this.setScreen(this.mode);
+    this.consumer.on('rebalancing', this.onConsumerRebalancing);
+    this.consumer.on('rebalanced', this.onConsumerRebalanced);
+    this.pushScreen(ConsumerStatusScreen);
   }
 
-  getScreenProps = (): ScreenProps => {
+  getScreenProps(): ScreenProps {
     return {
+      currentOffset: this.currentOffset,
       maxMessages: this.maxMessages,
       maxLogEntries: this.maxLogEntries,
       onMessageSelect: this.onMessageSelect,
@@ -66,29 +66,6 @@ export class ConsumerDashboard extends Dashboard {
       info: this.getInfoTable(),
       menuOptions: this.getMenuOptions(),
     };
-  }
-
-  changeScreen = (screenSelect: ScreenOption): void => {
-    this.screen.destroy();
-    this.setScreen(screenSelect);
-  }
-
-  setScreen = (screenSelect: ScreenOption): void => {
-    switch (screenSelect) {
-      case 'message':
-        this.screen = new MessageScreen(this.getScreenProps());
-        break;
-      case 'msglog':
-        this.screen = new ConsumerMessagesScreen(this.getScreenProps());
-        break;
-      case 'status':
-        this.screen = new ConsumerStatusScreen(this.getScreenProps());
-        break;
-      default:
-        process.exit(2);
-    }
-
-    this.screen.on('closed', () => this.changeScreen(this.mode));
   }
 
   getInfoTable = (): DataTable => {
@@ -102,32 +79,44 @@ export class ConsumerDashboard extends Dashboard {
         ['Topic', this.consumer.topic],
         ['Partition', this.partition ],
         ['Partition Offset', this.currentOffset ],
+        ['Current Rate', this.stats.cur + ' msg/s' ],
       ],
     };
   }
 
-  getMessageDetails = (): string[] => {
+  getMessageDetails = (): MessageDetails | undefined => {
     if (!this.selectedMessage) {
-      return [];
+      return undefined;
     }
 
     const { value } = this.selectedMessage;
-    const dumped = inspect(JSON.parse(value), true, 5, true);
-    // tslint:disable-next-line
-    return dumped.split("\n");
+
+    let dumped = String(value);
+
+    try {
+      const parsed = JSON.parse(value);
+      dumped = inspect(parsed, true, 5, true);
+    } catch (e) {
+
+    }
+
+    return {
+      message: this.selectedMessage,
+      // tslint:disable-next-line
+      lines: dumped.split("\n"),
+    };
   }
 
   onMessageSelect = (index: number): void => {
     this.selectedMessage = this.messages[index];
-    this.changeScreen('message');
+    this.pushScreen(MessageScreen);
   }
 
-  addMessage = (entry: MessageListEntry): void => {
+  addMessage = (entry: Message): void => {
     if (this.messages.length > 500) {
       this.messages.shift();
     }
     this.messages.push(entry);
-    this.render();
   }
 
   addLog = (line: string): void => {
@@ -159,6 +148,36 @@ export class ConsumerDashboard extends Dashboard {
     this.addLog(line);
   }
 
+  public prompt?: any;
+
+  onConsumerRebalancing = (): void => {
+    this.prompt ? this.prompt.detach() : undefined;
+    this.prompt = blessed.message({
+      label: 'Consumer Status',
+      parent: this.currentScreen!.screen,
+      border: 'line',
+      height: '20%',
+      width: 'half',
+      top: 'center',
+      left: 'center',
+    });
+    this.prompt.display('Consumer is rebalancing...', 0);
+  }
+
+  onConsumerRebalanced = (): void => {
+    this.prompt ? this.prompt.detach() : undefined;
+    this.prompt = blessed.message({
+      label: 'Consumer Status',
+      parent: this.currentScreen!.screen,
+      border: 'line',
+      height: '20%',
+      width: 'half',
+      top: 'center',
+      left: 'center',
+    });
+    this.prompt.display('Rebalanced!', 3);
+  }
+
   startUpdating = (): void => {
     this.updating = setInterval(this.updateStats, 1000);
   }
@@ -168,7 +187,7 @@ export class ConsumerDashboard extends Dashboard {
   }
 
   render = (): void => {
-    this.screen.updateProps(this.getScreenProps());
+    this.currentScreen ? this.currentScreen.updateProps(this.getScreenProps()) : undefined;
   }
 
   updateStats = (): void => {
@@ -204,7 +223,7 @@ export class ConsumerDashboard extends Dashboard {
 
   getMenuOptions = (): object => {
     return {
-      label: 'Consumer Menu',
+      label: 'Consumer',
       mouse: true,
       autoCommandKeys: false,
       style: {
@@ -218,13 +237,13 @@ export class ConsumerDashboard extends Dashboard {
         },
       },
       items: {
-        Log: {
-          keys: ['1'],
-          callback: () => this.changeScreen('msglog'),
-        },
         Status: {
+          keys: ['1'],
+          callback: () => this.setScreen(ConsumerStatusScreen),
+        },
+        Messages: {
           keys: ['2'],
-          callback: () => this.changeScreen('status'),
+          callback: () => this.setScreen(ConsumerMessagesScreen),
         },
         Quit: {
           keys: ['q'],
