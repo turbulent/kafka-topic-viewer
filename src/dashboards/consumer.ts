@@ -34,6 +34,7 @@ export class ConsumerDashboard extends Dashboard {
   public maxLogEntries = 500;
   public maxMessages = 500;
   public selectedMessage?: Message;
+  public prompt?: any;
 
   public stats: TimeStats = {
     time: Date.now(),
@@ -84,20 +85,32 @@ export class ConsumerDashboard extends Dashboard {
     };
   }
 
+  unpackMessage = (message): Message => {
+
+    try {
+      const unpacked = JSON.parse(message.value);
+      return {
+        ...message,
+        unpacked,
+      };
+    } catch (e) {
+    }
+
+    return message;
+  }
+
   getMessageDetails = (): MessageDetails | undefined => {
     if (!this.selectedMessage) {
       return undefined;
     }
 
-    const { value } = this.selectedMessage;
+    const { unpacked } = this.selectedMessage;
 
-    let dumped = String(value);
+    let dumped = String(unpacked);
 
     try {
-      const parsed = JSON.parse(value);
-      dumped = inspect(parsed, true, 5, true);
+      dumped = inspect(unpacked, false, 5, true);
     } catch (e) {
-
     }
 
     return {
@@ -116,7 +129,7 @@ export class ConsumerDashboard extends Dashboard {
     if (this.messages.length > 500) {
       this.messages.shift();
     }
-    this.messages.push(entry);
+    this.messages.push(this.unpackMessage(entry));
   }
 
   addLog = (line: string): void => {
@@ -147,8 +160,6 @@ export class ConsumerDashboard extends Dashboard {
   onConsumerLog = (line: string): void => {
     this.addLog(line);
   }
-
-  public prompt?: any;
 
   onConsumerRebalancing = (): void => {
     this.prompt ? this.prompt.detach() : undefined;

@@ -42,8 +42,14 @@ export class ConsumerMessagesScreen extends Screen {
 
     if (diff.length > 0) {
       this.msgList.setData([
-        ['Offset', 'Value'],
-        ...this.props.messages.map(m => ([ m.offset, m.value ])),
+        ['Offset', 'Value', 'ID'],
+        ...this.props.messages.map(m => {
+          if (m.unpacked && m.unpacked.name && m.unpacked.id) {
+            return [ m.offset, m.unpacked.name, m.unpacked.id ];
+          } else {
+            return [ m.offset, m.value, '' ];
+          }
+        }),
       ]);
       this.msgList.scrollTo(this.msgList.rows.length);
       this.state.offsets = offsets;

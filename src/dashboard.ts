@@ -84,6 +84,7 @@ export interface Message {
   topic: string;
   offset: number;
   value: any;
+  unpacked?: any;
 }
 
 export interface MessageDetails {
