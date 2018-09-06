@@ -32,15 +32,21 @@
   "devDependencies": {
     "@types/blessed": "^0.1.10",
     "@types/faker": "^4.1.2",
-    "@types/kafka-node": "^2.0.7",
     "@types/jest": "^23.1.0",
+    "@types/kafka-node": "^2.0.7",
     "@types/node": "^10.3.2",
     "jest": "^23.1.0",
     "nodemon": "^1.18.3",
+    "rimraf": "^2.6.2",
     "ts-jest": "^22.4.6",
     "ts-node": "^6.1.1",
     "tslint": "^5.10.0",
     "typescript": "^2.9.1"
+  },
+  "pkg": {
+    "assets": [
+      "node_modules/blessed/usr/*"
+    ]
   },
   "jest": {
     "verbose": true,
@@ -70,9 +76,11 @@
     "exec": "ts-node -r tsconfig-paths/register src/index.ts producer"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc --noUnusedLocals false",
-    "build:exe": "pkg . --targets node10-linux-x64 --output packages/ts-kafka-test",
-    "package": "npm run build && npm run build:exe",
+    "build": "rimraf dist && tsc --noUnusedLocals false",
+    "build:exe:win": "pkg . --targets node10-win-x64 --output packages/ts-kafka-test",
+    "build:exe:linux": "pkg . --targets node10-linux-x64 --output packages/ts-kafka-test",
+    "package:win": "npm run build && npm run build:exe:win",
+    "package:linux": "npm run build && npm run build:exe:linux",
     "format": "prettier --write \"**/*.ts\"",
     "test": "jest",
     "test:cov": "jest --coverage",
