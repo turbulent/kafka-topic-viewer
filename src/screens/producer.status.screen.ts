@@ -20,7 +20,7 @@ export class ProducerStatusScreen extends Screen {
   public lineGraph?: any;
   public grid?: any;
   public infoTable?: any;
-  public rateDonug?: any;
+  public rateDonut?: any;
   public log?: any;
 
   constructor() {
@@ -38,7 +38,7 @@ export class ProducerStatusScreen extends Screen {
 
     const { perc, max, cur, entries } = this.props.stats;
 
-    this.rateDonug.setData([{
+    this.rateDonut.setData([{
       percent: perc,
       label: `Max ${max} Cur: ${cur}`,
       color: 'cyan',
@@ -109,7 +109,7 @@ export class ProducerStatusScreen extends Screen {
       },
     });
 
-    this.rateDonug = this.grid.set(2, 8, 6, 4, blessedContrib.donut, {
+    this.rateDonut = this.grid.set(2, 8, 6, 4, blessedContrib.donut, {
       label: 'Throughtput msg/s',
       radius: 8,
       arcWidth: 3,
