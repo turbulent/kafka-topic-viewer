@@ -1,7 +1,9 @@
 import * as commander from 'commander';
-import { KafkaProducer } from './producer';
+import * as React from 'react';
+import * as blessed from 'blessed';
+import { render } from 'react-blessed';
 import { Dashboard } from './dashboard';
-
+import { KafkaProducerConfig } from './producer';
 import { KafkaConsumer } from './consumer';
 import { ProducerDashboard } from './dashboards/producer';
 import { ConsumerDashboard } from './dashboards/consumer';
@@ -10,11 +12,24 @@ import { ConsumerDashboard } from './dashboards/consumer';
 const version = require('../package.json').version;
 
 export class CLIProgram {
-  public producer!: KafkaProducer;
+  public screen: blessed.Widgets.Screen;
   public consumer!: KafkaConsumer;
-  public dashboard!: Dashboard;
+  public dashboard!: Dashboard | any;
 
-  constructor() { }
+  constructor() {
+    this.screen = blessed.screen({
+      smartCSR: true,
+      fullUnicode: true,
+    });
+
+    this.screen.key(['C-c'], (_ch, _key) => {
+      return process.exit(0);
+    });
+  }
+
+  setTitle(text: string) {
+    this.screen.title = `Kafka Topic Client -- ${text}`;
+  }
 
   setupCLI = () => {
     commander.version(version)
@@ -37,9 +52,15 @@ export class CLIProgram {
   }
 
   onProducer = (cmd): void => {
-    this.producer = new KafkaProducer(cmd.broker, cmd.zookeeper, cmd.topic, parseInt(cmd.partitions, 10), cmd.rate);
-    this.dashboard = new ProducerDashboard(this.producer);
-    this.producer.initialize();
+    const kafkaConfig = {
+      broker: cmd.broker,
+      topic: cmd.topic,
+      partitions: Number(cmd.partitions),
+      rate: Number(cmd.rate),
+    };
+
+    this.setTitle('Producer Mode');
+    this.dashboard = render(<ProducerDashboard kafkaConfig={kafkaConfig}/>, this.screen);
   }
 
   onConsumer = (cmd): void => {

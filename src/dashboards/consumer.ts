@@ -197,10 +197,6 @@ export class ConsumerDashboard extends Dashboard {
     this.updating && clearInterval(this.updating);
   }
 
-  render = (): void => {
-    this.currentScreen ? this.currentScreen.updateProps(this.getScreenProps()) : undefined;
-  }
-
   updateStats = (): void => {
 
     const now = Date.now();

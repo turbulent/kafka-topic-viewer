@@ -11,7 +11,7 @@ export abstract class Dashboard {
 
   public get currentScreen(): Screen | undefined {
     if (this.screenStack.length > 0) {
-      return this.screenStack[this.screenStack.length - 1 ];
+      return this.screenStack[this.screenStack.length - 1];
     }
   }
 
@@ -50,6 +50,10 @@ export abstract class Dashboard {
     this.pushScreen(screenClass);
   }
 
+  render = (): void => {
+    this.currentScreen ? this.currentScreen.updateProps(this.getScreenProps()) : undefined;
+  }
+
   startUpdating = (): void => {
     this.updating = setInterval(this.render, 1000);
   }
@@ -59,7 +63,6 @@ export abstract class Dashboard {
   }
 
   abstract getScreenProps(): object;
-  abstract render: () => void;
 }
 
 export interface LineGraphEntry {
