@@ -5,6 +5,13 @@ import { EventEmitter } from 'events';
 
 type ConsumerEvents = 'message' | 'log' | 'rebalancing' | 'rebalanced';
 
+export interface KafkaProducerConfig {
+  brokerHost: string;
+  zookeeperHost: string;
+  consumerGroup: string;
+  topic: string;
+}
+
 export declare interface KafkaConsumer extends EventEmitter {
   on(event: 'message', listener: (data: any) => any): this;
   on(event: 'sendError', listener: (err: any) => any): this;
@@ -15,13 +22,17 @@ export declare interface KafkaConsumer extends EventEmitter {
 
 export class KafkaConsumer extends EventEmitter {
   private consumer!: ConsumerGroup;
+  public brokerHost: string;
+  public zookeeperHost: string;
+  public consumerGroup: string;
+  public topic: string;
 
-  constructor(
-    public kafkaHost: string,
-    public zookeeperHost: string,
-    public consumerGroup: string,
-    public topic: string) {
-      super();
+  constructor(config: KafkaProducerConfig) {
+    super();
+    this.brokerHost = config.brokerHost,
+    this.zookeeperHost = config.zookeeperHost;
+    this.consumerGroup = config.consumerGroup;
+    this.topic = config.topic;
   }
 
   initialize = () => {
@@ -29,8 +40,9 @@ export class KafkaConsumer extends EventEmitter {
     this.emit('log', 'Initializing');
 
     this.consumer = new ConsumerGroup({
-      host: this.zookeeperHost,
-      kafkaHost: this.kafkaHost,
+      // XXX check that zookpr host isn't needed
+      // host: this.zookeeperHost,
+      kafkaHost: this.brokerHost,
       groupId: this.consumerGroup,
       sessionTimeout: 15000,
       protocol: ['roundrobin'],

@@ -1,10 +1,11 @@
-import { KafkaProducer, KafkaProducerConfig } from '../producer';
+import { KafkaProducer } from '../producer';
 import { TimeStats, DataTable } from '../dashboard';
-import { ProducerStatusScreen } from '../screens/producer.status.screen';
+import { StatusScreen } from '../screens/status.screen';
 import * as React from 'react';
 
 interface ProducerDashboardProps {
-  kafkaConfig: KafkaProducerConfig;
+  producer: KafkaProducer;
+  onMount: () => void;
 }
 
 interface ProducerDashboardState {
@@ -12,7 +13,7 @@ interface ProducerDashboardState {
   stats: TimeStats;
 }
 
-export class ProducerDashboard extends React.Component {
+export class ProducerDashboard extends React.Component<ProducerDashboardProps, ProducerDashboardState> {
   public readonly maxLogEntries = 500;
   public producer: KafkaProducer;
   public partitionsOffset: { [x: number]: number } = {};
@@ -34,11 +35,14 @@ export class ProducerDashboard extends React.Component {
 
   constructor(public props: ProducerDashboardProps) {
     super(props);
-    this.producer = new KafkaProducer(props.kafkaConfig);
+    this.producer = props.producer;
+  }
+
+  componentDidMount() {
     this.producer.on('message', this.onProducerMessage);
     this.producer.on('sendError', this.onProducerSendError);
     this.producer.on('log', this.onProducerLog);
-    this.producer.initialize();
+    this.props.onMount();
   }
 
   onProducerMessage = (message): void => {
@@ -58,53 +62,53 @@ export class ProducerDashboard extends React.Component {
   }
 
   updateStats() {
-    const newStats: TimeStats = {
-      ...this.state.stats,
-      entries: [...this.state.stats.entries],
-    };
+    this.setState(state => {
+      const newStats: TimeStats = {
+        ...state.stats,
+        entries: [...state.stats.entries],
+      };
 
-    newStats.accumulator++;
-    const now = Date.now();
+      newStats.accumulator++;
+      const now = Date.now();
 
-    if ((now - newStats.time) >= 1000) {
-      newStats.entries.push({
-        time: now,
-        messages: newStats.accumulator,
-      });
+      if ((now - newStats.time) >= 1000) {
+        newStats.entries.push({
+          time: now,
+          messages: newStats.accumulator,
+        });
 
-      newStats.cur = newStats.accumulator;
-      if (newStats.accumulator > newStats.max) {
-        newStats.max = newStats.accumulator;
+        newStats.cur = newStats.accumulator;
+        if (newStats.accumulator > newStats.max) {
+          newStats.max = newStats.accumulator;
+        }
+
+        if (newStats.entries.length > 6) {
+          newStats.entries.shift();
+        }
+
+        newStats.time = now;
+        newStats.accumulator = 0;
       }
 
-      if (newStats.entries.length > 6) {
-        newStats.entries.shift();
+      if (newStats.entries.length > 0 && newStats.max > 0) {
+        const lastEntry = newStats.entries[newStats.entries.length - 1];
+        newStats.perc = lastEntry.messages * 100 / newStats.max;
       }
 
-      newStats.time = now;
-      newStats.accumulator = 0;
-    }
-
-    if (newStats.entries.length > 0 && newStats.max > 0) {
-      const lastEntry = newStats.entries[newStats.entries.length - 1];
-      newStats.perc = lastEntry.messages * 100 / newStats.max;
-    }
-
-    this.setState({
-      stats: newStats,
+      return { stats: newStats };
     });
   }
 
   addLog(line: string) {
-    const newLogItems = [...this.state.logItems];
+    this.setState(state => {
+      const newLogItems = [...state.logItems];
 
-    newLogItems.push(line);
-    if (newLogItems.length > this.maxLogEntries) {
-      newLogItems.shift();
-    }
+      newLogItems.push(line);
+      if (newLogItems.length > this.maxLogEntries) {
+        newLogItems.shift();
+      }
 
-    this.setState({
-      logItems: newLogItems,
+      return { logItems: newLogItems };
     });
   }
 
@@ -137,7 +141,7 @@ export class ProducerDashboard extends React.Component {
       headers: ['Metric', 'Value'],
       data: [
         ['Mode', 'Producer'],
-        ['Kafka Broker', this.producer.broker ],
+        ['Kafka Broker', this.producer.brokerHost ],
         ['Topic', this.producer.topic],
         ['Partitions', this.producer.partitionsIds.join(',') ],
       ],
@@ -146,7 +150,7 @@ export class ProducerDashboard extends React.Component {
 
   render() {
     return (
-      <ProducerStatusScreen
+      <StatusScreen
         logItems={this.state.logItems}
         stats={this.state.stats}
         maxLogEntries={this.maxLogEntries}

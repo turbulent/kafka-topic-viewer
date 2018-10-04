@@ -2,19 +2,17 @@ import * as commander from 'commander';
 import * as React from 'react';
 import * as blessed from 'blessed';
 import { render } from 'react-blessed';
-import { Dashboard } from './dashboard';
-import { KafkaProducerConfig } from './producer';
 import { KafkaConsumer } from './consumer';
 import { ProducerDashboard } from './dashboards/producer';
 import { ConsumerDashboard } from './dashboards/consumer';
+import { KafkaProducer } from './producer';
 
 // tslint:disable-next-line
 const version = require('../package.json').version;
 
 export class CLIProgram {
   public screen: blessed.Widgets.Screen;
-  public consumer!: KafkaConsumer;
-  public dashboard!: Dashboard | any;
+  public reactApp;
 
   constructor() {
     this.screen = blessed.screen({
@@ -52,21 +50,43 @@ export class CLIProgram {
   }
 
   onProducer = (cmd): void => {
-    const kafkaConfig = {
-      broker: cmd.broker,
+    const producer = new KafkaProducer({
+      brokerHost: cmd.broker,
       topic: cmd.topic,
       partitions: Number(cmd.partitions),
       rate: Number(cmd.rate),
-    };
+    });
 
-    this.setTitle('Producer Mode');
-    this.dashboard = render(<ProducerDashboard kafkaConfig={kafkaConfig}/>, this.screen);
+    this.reactApp = render(
+      <ProducerDashboard
+        producer={producer}
+        onMount={() => producer.initialize()}
+      />,
+      this.screen,
+    );
+
+    this.setTitle('Producer');
   }
 
   onConsumer = (cmd): void => {
-    this.consumer = new KafkaConsumer(cmd.broker, cmd.zookeeper, cmd.group, cmd.topic);
-    this.dashboard = new ConsumerDashboard(this.consumer, cmd.mode);
-    this.consumer.initialize();
+    const consumer = new KafkaConsumer({
+      brokerHost: cmd.broker,
+      zookeeperHost: cmd.zookeeper,
+      consumerGroup: cmd.group,
+      topic: cmd.topic,
+    });
+
+    this.reactApp = render(
+      <ConsumerDashboard
+        consumer={consumer}
+        mode={cmd.mode}
+        onMount={() => consumer.initialize()}
+        blessedScreen={this.screen}
+      />,
+      this.screen,
+    );
+
+    this.setTitle(`Consumer (Mode: ${cmd.mode})`);
   }
 
   run = (): void => {
