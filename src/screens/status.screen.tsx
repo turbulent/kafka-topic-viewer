@@ -1,4 +1,5 @@
 import * as React from 'react';
+import * as blessed from 'blessed';
 import { Grid, Line, Donut, Log } from 'react-blessed-contrib';
 import { TimeStats, DataTable, COLOR_HOVER } from '../dashboard';
 
@@ -8,10 +9,12 @@ export interface StatusScreenProps {
   info: DataTable;
   menuOptions: object;
   maxLogEntries: number;
+  screen: blessed.Widgets.Screen;
 }
 
 export class StatusScreen extends React.Component<StatusScreenProps> {
   logRef: any = null;
+  menuRef: any = null;
 
   getLineGraphData() {
     const { entries } = this.props.stats;
@@ -51,6 +54,7 @@ export class StatusScreen extends React.Component<StatusScreenProps> {
       <Grid rows={14} cols={12}>
         {/* Top Menu */}
         <listbar
+          ref={n => this.menuRef = n}
           row={0}
           col={0}
           rowSpan={2}

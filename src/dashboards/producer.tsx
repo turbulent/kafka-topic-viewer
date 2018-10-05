@@ -2,10 +2,12 @@ import { KafkaProducer } from '../producer';
 import { TimeStats, DataTable } from '../dashboard';
 import { StatusScreen } from '../screens/status.screen';
 import * as React from 'react';
+import * as blessed from 'blessed';
 
 interface ProducerDashboardProps {
   producer: KafkaProducer;
   onMount: () => void;
+  screen: blessed.Widgets.Screen;
 }
 
 interface ProducerDashboardState {
@@ -156,6 +158,7 @@ export class ProducerDashboard extends React.Component<ProducerDashboardProps, P
         maxLogEntries={this.maxLogEntries}
         menuOptions={this.getMenuOptions()}
         info={this.getInfoTable()}
+        screen={this.props.screen}
       />
     );
   }

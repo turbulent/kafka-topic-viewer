@@ -7,13 +7,10 @@ import { StatusScreen } from '../screens/status.screen';
 import { MessageDetailsScreen } from '../screens/message.details.screen';
 import { inspect } from 'util';
 
-type DashboardMode = 'status' | 'msglog';
-
 interface ConsumerDashboardProps {
   consumer: KafkaConsumer;
-  mode: DashboardMode;
   onMount: () => void;
-  blessedScreen: blessed.Widgets.Screen;
+  screen: blessed.Widgets.Screen;
 }
 
 interface ConsumerDashboardState {
@@ -29,7 +26,6 @@ export class ConsumerDashboard extends React.Component<ConsumerDashboardProps, C
   public readonly maxMessages = 500;
 
   public consumer: KafkaConsumer;
-  public mode: DashboardMode;
   public currentOffset: number = 0;
   public lastValue: any;
   public partition: number = 0;
@@ -53,7 +49,6 @@ export class ConsumerDashboard extends React.Component<ConsumerDashboardProps, C
   constructor(public props: ConsumerDashboardProps) {
     super(props);
     this.consumer = props.consumer;
-    this.mode = props.mode;
   }
 
   componentDidMount() {
@@ -71,8 +66,7 @@ export class ConsumerDashboard extends React.Component<ConsumerDashboardProps, C
         ...message,
         unpacked,
       };
-    } catch (e) {
-    }
+    } catch (e) {}
 
     return message;
   }
@@ -88,7 +82,7 @@ export class ConsumerDashboard extends React.Component<ConsumerDashboardProps, C
     let dumped = String(unpacked);
     try {
       dumped = inspect(unpacked, false, 5, true);
-    } catch (_) {}
+    } catch (e) {}
 
     return {
       message: selectedMessage,
@@ -101,12 +95,12 @@ export class ConsumerDashboard extends React.Component<ConsumerDashboardProps, C
       currentScreen: MessageDetailsScreen,
       selectedMessage: state.messages[index - 1],
     }));
-    this.props.blessedScreen.key('escape', this.closeMessageScreen);
+    this.props.screen.key('escape', this.closeMessageScreen);
   }
 
   closeMessageScreen = () => {
     this.setScreen(ConsumerMessagesScreen);
-    this.props.blessedScreen.unkey('escape', this.closeMessageScreen);
+    this.props.screen.unkey('escape', this.closeMessageScreen);
   }
 
   addMessage = (entry: Message): void => {
@@ -163,7 +157,7 @@ export class ConsumerDashboard extends React.Component<ConsumerDashboardProps, C
     this.prompt && this.prompt.detach();
     this.prompt = blessed.message({
       label: 'Consumer Status',
-      parent: this.props.blessedScreen,
+      parent: this.props.screen,
       border: 'line',
       height: '20%',
       width: 'half',
@@ -178,7 +172,7 @@ export class ConsumerDashboard extends React.Component<ConsumerDashboardProps, C
     this.prompt && this.prompt.detach();
     this.prompt = blessed.message({
       label: 'Consumer Status',
-      parent: this.props.blessedScreen,
+      parent: this.props.screen,
       border: 'line',
       height: '20%',
       width: 'half',
@@ -225,10 +219,10 @@ export class ConsumerDashboard extends React.Component<ConsumerDashboardProps, C
     });
   }
 
-  setScreen(componentType: React.ComponentType<any>): void {
-    this.setState({
-      currentScreen: componentType,
-    });
+  setScreen = (componentType: React.ComponentType<any>) => {
+    if (componentType !== this.state.currentScreen) {
+      this.setState({ currentScreen: componentType });
+    }
   }
 
   getMenuOptions = (): object => {
@@ -270,6 +264,7 @@ export class ConsumerDashboard extends React.Component<ConsumerDashboardProps, C
       logItems: this.state.logItems,
       info: this.getInfoTable(),
       menuOptions: this.getMenuOptions(),
+      screen: this.props.screen,
     };
   }
 
@@ -283,7 +278,7 @@ export class ConsumerDashboard extends React.Component<ConsumerDashboardProps, C
       logItems: this.state.logItems,
       info: this.getInfoTable(),
       menuOptions: this.getMenuOptions(),
-      blessedScreen: this.props.blessedScreen,
+      screen: this.props.screen,
     };
   }
 
@@ -311,15 +306,18 @@ export class ConsumerDashboard extends React.Component<ConsumerDashboardProps, C
   }
 
   render() {
-    switch (this.state.currentScreen) {
-      case StatusScreen:
-        return <StatusScreen {...this.getConsumerStatusScreenProps()}/>;
-      case ConsumerMessagesScreen:
-        return <ConsumerMessagesScreen {...this.getConsumerMessagesScreenProps()}/>;
-      case MessageDetailsScreen:
-        return <MessageDetailsScreen {...this.getMessageDetailsScreenProps()}/>;
-      default:
-        return;
-    }
+    return (
+      <>
+        <element hidden={this.state.currentScreen !== StatusScreen}>
+          <StatusScreen {...this.getConsumerStatusScreenProps()}/>
+        </element>
+        <element hidden={this.state.currentScreen !== ConsumerMessagesScreen}>
+          <ConsumerMessagesScreen {...this.getConsumerMessagesScreenProps()}/>
+        </element>
+        {/* <element hidden={this.state.currentScreen !== MessageDetailsScreen}>
+          <MessageDetailsScreen {...this.getMessageDetailsScreenProps()}/>
+        </element> */}
+      </>
+    );
   }
 }

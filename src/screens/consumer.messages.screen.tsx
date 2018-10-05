@@ -12,34 +12,34 @@ interface ConsumerMessagesScreenProps {
   menuOptions: object;
   info: DataTable;
   onMessageSelect?: (i: number) => void;
-  blessedScreen: blessed.Widgets.Screen;
+  screen: blessed.Widgets.Screen;
 }
 
 export class ConsumerMessagesScreen extends React.Component<ConsumerMessagesScreenProps> {
   public msgList: blessed.Widgets.ListTableElement | null = null;
   public logList: any = null;
 
-  componentDidMount() {
-    if (this.msgList) {
-      this.msgList.focus();
-      // XXX This is required because of a bug in blessed that prevents
-      // being able to assign a label on construction of a listtable.
-      // Consider swapping in neo-blessed.
-      this.msgList.setLabel('Messages');
-    }
-  }
+  // componentDidMount() {
+  //   if (this.msgList) {
+  //     this.msgList.focus();
+  //     // XXX This is required because of a bug in blessed that prevents
+  //     // being able to assign a label on construction of a listtable.
+  //     // Consider swapping in neo-blessed.
+  //     this.msgList.setLabel('Messages');
+  //   }
+  // }
 
-  componentDidUpdate() {
-    const { logItems, messages } = this.props;
+  // componentDidUpdate() {
+  //   const { logItems, messages } = this.props;
 
-    if (this.logList && logItems) {
-      this.logList.scrollTo(logItems.length);
-    }
+  //   if (this.logList && logItems) {
+  //     this.logList.scrollTo(logItems.length);
+  //   }
 
-    if (this.msgList && messages) {
-      this.msgList.scrollTo(messages.length);
-    }
-  }
+  //   if (this.msgList && messages) {
+  //     this.msgList.scrollTo(messages.length);
+  //   }
+  // }
 
   getMsgListData() {
     // const offsets = this.props.messages.map(m => m.offset);
@@ -84,12 +84,11 @@ export class ConsumerMessagesScreen extends React.Component<ConsumerMessagesScre
           col={0}
           rowSpan={2}
           colSpan={12}
-          parent={this.props.blessedScreen}
           {...this.props.menuOptions}
         />
 
         {/* Msg List */}
-        {/* <listtable
+        <listtable
           ref={n => this.msgList = n}
           onSelect={this.onItemSelect}
           data={this.getMsgListData()}
@@ -116,10 +115,10 @@ export class ConsumerMessagesScreen extends React.Component<ConsumerMessagesScre
               hover: { bg: COLOR_HOVER },
             },
           }}
-        /> */}
+        />
 
         {/* Table */}
-        {/* <listtable
+        <listtable
           data={this.getTableData()}
           row={8}
           col={0}
@@ -141,10 +140,10 @@ export class ConsumerMessagesScreen extends React.Component<ConsumerMessagesScre
               hover: { bg: COLOR_HOVER },
             },
           }}
-        /> */}
+        />
 
         {/* Log List */}
-        {/* <Log
+        <Log
           ref={n => this.logList = n ? n.widget : null}
           items={this.props.logItems}
           row={2}
@@ -155,7 +154,7 @@ export class ConsumerMessagesScreen extends React.Component<ConsumerMessagesScre
           fg={'green'}
           selectedFg={'green'}
           label={'Client Log'}
-        /> */}
+        />
       </Grid>
     );
   }

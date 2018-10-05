@@ -45,7 +45,6 @@ export class CLIProgram {
       .option('-z, --zookeeper [value]', 'Specify the Zookeeper connection via hostname:port', 'localhost:2181')
       .option('-g, --group [value]', 'Specify the consumer group id', 'group.test.sc.lorem')
       .option('-t, --topic [value]', 'Specify the topic to produce message for', 'test.sc.lorem')
-      .option('-m, --mode [value]', 'Specify the operating mode', 'status')
       .action(this.onConsumer);
   }
 
@@ -61,6 +60,7 @@ export class CLIProgram {
       <ProducerDashboard
         producer={producer}
         onMount={() => producer.initialize()}
+        screen={this.screen}
       />,
       this.screen,
     );
@@ -79,14 +79,13 @@ export class CLIProgram {
     this.reactApp = render(
       <ConsumerDashboard
         consumer={consumer}
-        mode={cmd.mode}
         onMount={() => consumer.initialize()}
-        blessedScreen={this.screen}
+        screen={this.screen}
       />,
       this.screen,
     );
 
-    this.setTitle(`Consumer (Mode: ${cmd.mode})`);
+    this.setTitle(`Consumer`);
   }
 
   run = (): void => {
