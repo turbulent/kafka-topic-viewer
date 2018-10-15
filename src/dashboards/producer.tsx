@@ -19,8 +19,6 @@ export class ProducerDashboard extends React.Component<ProducerDashboardProps, P
   public readonly maxLogEntries = 500;
   public producer: KafkaProducer;
   public partitionsOffset: { [x: number]: number } = {};
-  public currentOffset: number = 0;
-  public lastValue: any;
   public partition: number = 0;
 
   public state: ProducerDashboardState = {
@@ -158,7 +156,7 @@ export class ProducerDashboard extends React.Component<ProducerDashboardProps, P
         maxLogEntries={this.maxLogEntries}
         menuOptions={this.getMenuOptions()}
         info={this.getInfoTable()}
-        screen={this.props.screen}
+        hidden={false}
       />
     );
   }

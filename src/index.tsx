@@ -33,7 +33,6 @@ export class CLIProgram {
     commander.version(version)
       .command('producer')
       .option('-b, --broker [value]', 'Specify the broker to connect to via hostname:port ', 'localhost:9092')
-      .option('-z, --zookeeper [value]', 'Specify the Zookeeper connection via hostname:port', 'localhost:2181')
       .option('-t, --topic [value]', 'Specify the topic to produce message for', 'test.sc.lorem')
       .option('-p, --partitions [value]', 'How many partition to shard on topic', 1)
       .option('-r, --rate [value]', 'Max msg/s to produce (-1 for unlimited)', -1)
@@ -42,10 +41,13 @@ export class CLIProgram {
     commander
       .command('consumer')
       .option('-b, --broker [value]', 'Specify the broker to connect to via hostname:port ', 'localhost:9092')
-      .option('-z, --zookeeper [value]', 'Specify the Zookeeper connection via hostname:port', 'localhost:2181')
       .option('-g, --group [value]', 'Specify the consumer group id', 'group.test.sc.lorem')
-      .option('-t, --topic [value]', 'Specify the topic to produce message for', 'test.sc.lorem')
+      .option('-t, --topics <topics>', 'Specify the topic(s) on which to consume messages', this.splitTopics, 'test.sc.lorem')
       .action(this.onConsumer);
+  }
+
+  splitTopics(val) {
+    return val.split(',');
   }
 
   onProducer = (cmd): void => {
@@ -71,9 +73,8 @@ export class CLIProgram {
   onConsumer = (cmd): void => {
     const consumer = new KafkaConsumer({
       brokerHost: cmd.broker,
-      zookeeperHost: cmd.zookeeper,
       consumerGroup: cmd.group,
-      topic: cmd.topic,
+      topics: cmd.topics,
     });
 
     this.reactApp = render(

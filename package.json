@@ -25,7 +25,9 @@
     "blessed-contrib": "^4.8.6",
     "commander": "^2.16.0",
     "faker": "^4.1.0",
+    "fast-deep-equal": "^2.0.1",
     "kafka-node": "^2.6.1",
+    "lodash.debounce": "^4.0.8",
     "marked": "^0.5.1",
     "pkg": "^4.3.4",
     "react": "^16.5.2",
@@ -80,7 +82,7 @@
     "ignore": [
       "src/**/*.spec.ts"
     ],
-    "exec": "ts-node -r tsconfig-paths/register src/index.ts producer"
+    "exec": "ts-node -r tsconfig-paths/register src/index.ts"
   },
   "scripts": {
     "build": "rimraf dist && tsc --noUnusedLocals false",

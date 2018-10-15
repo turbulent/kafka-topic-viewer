@@ -8,7 +8,7 @@ cache:
     - node_modules/
 
 stages:
-  - test
+  # - test
   - build
 
 tests:

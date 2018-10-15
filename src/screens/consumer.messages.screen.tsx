@@ -12,53 +12,72 @@ interface ConsumerMessagesScreenProps {
   menuOptions: object;
   info: DataTable;
   onMessageSelect?: (i: number) => void;
-  screen: blessed.Widgets.Screen;
+  hidden: boolean;
 }
 
-export class ConsumerMessagesScreen extends React.Component<ConsumerMessagesScreenProps> {
+interface ConsumerMessagesScreenState {
+  topicFilter: string;
+  nameFilter: string;
+}
+
+export class ConsumerMessagesScreen extends React.Component<ConsumerMessagesScreenProps, ConsumerMessagesScreenState> {
   public msgList: blessed.Widgets.ListTableElement | null = null;
   public logList: any = null;
+  public topicFilterBox: any = null;
+  public nameFilterBox: any = null;
 
-  // componentDidMount() {
-  //   if (this.msgList) {
-  //     this.msgList.focus();
-  //     // XXX This is required because of a bug in blessed that prevents
-  //     // being able to assign a label on construction of a listtable.
-  //     // Consider swapping in neo-blessed.
-  //     this.msgList.setLabel('Messages');
-  //   }
-  // }
+  public state: ConsumerMessagesScreenState = {
+    topicFilter: '',
+    nameFilter: '',
+  };
 
-  // componentDidUpdate() {
-  //   const { logItems, messages } = this.props;
+  componentDidMount() {
+    if (this.msgList) {
+      this.msgList.focus();
+      // HACK: This is required because of a bug in blessed that prevents being
+      // able to assign a label immediately on construction of a listtable.
+      this.msgList.setLabel('Messages');
+    }
+  }
 
-  //   if (this.logList && logItems) {
-  //     this.logList.scrollTo(logItems.length);
-  //   }
+  componentDidUpdate() {
+    const { logItems, messages } = this.props;
 
-  //   if (this.msgList && messages) {
-  //     this.msgList.scrollTo(messages.length);
-  //   }
-  // }
+    if (this.logList && logItems) {
+      this.logList.scrollTo(logItems.length);
+    }
+
+    if (this.msgList && messages) {
+      this.msgList.scrollTo(messages.length);
+    }
+  }
 
   getMsgListData() {
-    // const offsets = this.props.messages.map(m => m.offset);
-    // const diff = offsets.filter(o => this.state.offsets.indexOf(o) < 0);
-    // if (diff.length > 0) {
-    //   this.setState({ offsets });
-    // }
-    const { messages } = this.props;
+    let { messages } = this.props;
+    const { topicFilter, nameFilter } = this.state;
+
+    if (topicFilter || nameFilter) {
+      messages = messages.filter(m => {
+        const matchesTopic = m.topic.toLowerCase().includes(topicFilter);
+        const matchesName = m.unpacked && m.unpacked.name && m.unpacked.name.toLowerCase().includes(nameFilter);
+        return matchesTopic && matchesName;
+      });
+    }
 
     const dataRows = messages.map(m => {
-      return (m.unpacked && m.unpacked.name && m.unpacked.id)
-        ? [ m.offset, m.unpacked.name, m.unpacked.id ]
-        : [ m.offset, m.value, '' ];
+      return (m.unpacked && m.unpacked.name && m.unpacked.time && m.unpacked.id)
+        ? [ m.topic, m.unpacked.name, this.getTimeString(m.unpacked.time) ]
+        : [ m.topic, m.value, '' ];
     });
 
     return [
-      ['Offset', 'Value', 'ID'],
+      ['Topic', 'Message', 'Timestamp'],
       ...dataRows,
     ];
+  }
+
+  getTimeString(timestamp: number): string {
+    return new Date(timestamp).toISOString().replace('T', ' ').slice(0, -5);
   }
 
   getTableData() {
@@ -75,87 +94,119 @@ export class ConsumerMessagesScreen extends React.Component<ConsumerMessagesScre
     }
   }
 
+  onTopicFilterSubmit = (text: string) => {
+    this.setState({ topicFilter: text.toLowerCase() });
+  }
+
+  onNameFilterSubmit = (text: string) => {
+    this.setState({ nameFilter: text.toLowerCase() });
+  }
+
   render() {
     return (
-      <Grid rows={14} cols={12}>
-        {/* Top Menu */}
-        <listbar
-          row={0}
-          col={0}
-          rowSpan={2}
-          colSpan={12}
-          {...this.props.menuOptions}
-        />
+      <element hidden={this.props.hidden}>
+        <Grid rows={14} cols={12}>
+          {/* Top Menu */}
+          <listbar
+            row={0}
+            col={0}
+            rowSpan={2}
+            colSpan={6}
+            {...this.props.menuOptions}
+          />
+          <textbox
+            ref={n => this.topicFilterBox = n}
+            row={0}
+            col={6}
+            rowSpan={1}
+            colSpan={6}
+            inputOnFocus={true}
+            mouse={true}
+            label={'Filter by topic'}
+            onSubmit={this.onTopicFilterSubmit}
+          />
+          <textbox
+            ref={n => this.nameFilterBox = n}
+            row={1}
+            col={6}
+            rowSpan={1}
+            colSpan={6}
+            inputOnFocus={true}
+            mouse={true}
+            label={'Filter by name'}
+            onSubmit={this.onNameFilterSubmit}
+          />
 
-        {/* Msg List */}
-        <listtable
-          ref={n => this.msgList = n}
-          onSelect={this.onItemSelect}
-          data={this.getMsgListData()}
-          row={2}
-          col={4}
-          rowSpan={12}
-          colSpan={8}
-          scrollable={true}
-          interactive={true}
-          mouse={true}
-          keys={true}
-          width={'shrink'}
-          noCellBorders={true}
-          pad={0}
-          align={'left'}
-          style={{
-            header: {
-              bg: COLOR_HOVER,
-              fg: 'white',
-            },
-            cell: {
-              fg: 'green',
-              selected: { fg: 'white', bg: 'blue' },
-              hover: { bg: COLOR_HOVER },
-            },
-          }}
-        />
+          {/* Msg List */}
+          <listtable
+            ref={n => this.msgList = n}
+            onSelect={this.onItemSelect}
+            data={this.getMsgListData()}
+            row={2}
+            col={4}
+            rowSpan={12}
+            colSpan={8}
+            scrollable={true}
+            interactive={true}
+            mouse={true}
+            keys={true}
+            width={'shrink'}
+            noCellBorders={true}
+            pad={0}
+            align={'left'}
+            style={{
+              header: {
+                bg: COLOR_HOVER,
+                fg: 'white',
+              },
+              cell: {
+                fg: 'green',
+                selected: { fg: 'white', bg: 'blue' },
+                hover: { bg: COLOR_HOVER },
+              },
+            }}
+          />
 
-        {/* Table */}
-        <listtable
-          data={this.getTableData()}
-          row={8}
-          col={0}
-          rowSpan={6}
-          colSpan={4}
-          scrollable={true}
-          interactive={true}
-          mouse={true}
-          keys={true}
-          align={'left'}
-          pad={0}
-          style={{
-            header: {
-              bg: COLOR_HOVER,
-              fg: 'white',
-            },
-            cell: {
-              fg: 'green',
-              hover: { bg: COLOR_HOVER },
-            },
-          }}
-        />
+          {/* Table */}
+          <listtable
+            data={this.getTableData()}
+            row={8}
+            col={0}
+            rowSpan={6}
+            colSpan={4}
+            scrollable={true}
+            interactive={true}
+            mouse={true}
+            keys={true}
+            align={'left'}
+            pad={0}
+            style={{
+              header: {
+                bg: COLOR_HOVER,
+                fg: 'white',
+              },
+              cell: {
+                fg: 'green',
+                hover: { bg: COLOR_HOVER },
+              },
+            }}
+          />
 
-        {/* Log List */}
-        <Log
-          ref={n => this.logList = n ? n.widget : null}
-          items={this.props.logItems}
-          row={2}
-          col={0}
-          rowSpan={6}
-          colSpan={4}
-          bufferLength={this.props.maxLogEntries}
-          fg={'green'}
-          selectedFg={'green'}
-          label={'Client Log'}
-        />
-      </Grid>
+          {/* Log List */}
+          <Log
+            ref={n => this.logList = n ? n.widget : null}
+            items={this.props.logItems}
+            row={2}
+            col={0}
+            rowSpan={6}
+            colSpan={4}
+            bufferLength={this.props.maxLogEntries}
+            fg={'green'}
+            selectedFg={'green'}
+            label={'Client Log'}
+          />
+        </Grid>
+      </element>
     );
   }
 }

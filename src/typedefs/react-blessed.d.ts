@@ -7,6 +7,7 @@ declare global {
       listbar: any;
       listtable: any;
       list: any;
+      textbox: any;
     }
   }
 }

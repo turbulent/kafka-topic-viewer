@@ -6,6 +6,7 @@ import { ConsumerMessagesScreen } from '../screens/consumer.messages.screen';
 import { StatusScreen } from '../screens/status.screen';
 import { MessageDetailsScreen } from '../screens/message.details.screen';
 import { inspect } from 'util';
+import * as debounce from 'lodash.debounce';
 
 interface ConsumerDashboardProps {
   consumer: KafkaConsumer;
@@ -18,6 +19,8 @@ interface ConsumerDashboardState {
   selectedMessage?: Message;
   messages: Message[];
   logItems: string[];
+  currentOffset: number;
+  partition: number;
   stats: TimeStats;
 }
 
@@ -25,17 +28,19 @@ export class ConsumerDashboard extends React.Component<ConsumerDashboardProps, C
   public readonly maxLogEntries = 500;
   public readonly maxMessages = 500;
 
+  public batchedUpdates: any = undefined;
+
   public consumer: KafkaConsumer;
-  public currentOffset: number = 0;
-  public lastValue: any;
-  public partition: number = 0;
   public prompt?: any;
+  public statsTimer?: NodeJS.Timer;
 
   public state: ConsumerDashboardState = {
     currentScreen: StatusScreen,
     selectedMessage: undefined,
     messages: [],
     logItems: [],
+    currentOffset: 0,
+    partition: 0,
     stats: {
       time: Date.now(),
       accumulator: 0,
@@ -57,6 +62,13 @@ export class ConsumerDashboard extends React.Component<ConsumerDashboardProps, C
     this.consumer.on('rebalancing', this.onConsumerRebalancing);
     this.consumer.on('rebalanced', this.onConsumerRebalanced);
     this.props.onMount();
+    this.statsTimer = setInterval(this.updateStats, 500);
+  }
+
+  componentWillUnmount() {
+    if (this.statsTimer) {
+      clearInterval(this.statsTimer);
+    }
   }
 
   unpackMessage = (message): Message => {
@@ -103,46 +115,42 @@ export class ConsumerDashboard extends React.Component<ConsumerDashboardProps, C
     this.props.screen.unkey('escape', this.closeMessageScreen);
   }
 
-  addMessage = (entry: Message): void => {
-    this.setState(state => {
-      const newMessages = [...state.messages];
-
-      newMessages.push(this.unpackMessage(entry));
-      if (newMessages.length > this.maxMessages) {
-        newMessages.shift();
-      }
-
-      return { messages: newMessages };
-    });
-  }
-
   addLog = (line: string): void => {
-    this.setState(state => {
-      const newLogItems = [...state.logItems];
+    const newLogItems = [...this.state.logItems];
 
-      newLogItems.push(line);
-      if (newLogItems.length > this.maxLogEntries) {
-        newLogItems.shift();
-      }
+    newLogItems.push(line);
+    if (newLogItems.length > this.maxLogEntries) {
+      newLogItems.shift();
+    }
 
-      return { logItems: newLogItems };
-    });
+    this.setState({ logItems: newLogItems });
   }
 
   onConsumerMessage = (message): void => {
-    this.currentOffset = message.highWaterOffset;
-    this.lastValue = message.value;
-    this.partition = message.partition;
+    const { messages, stats } = this.batchedUpdates || this.state;
 
-    this.setState(state => ({
+    const newMessages = [...messages, this.unpackMessage(message)];
+    if (newMessages.length > this.maxMessages) {
+      newMessages.shift();
+    }
+
+    this.batchedUpdates = {
+      messages: newMessages,
+      currentOffset: message.highWaterOffset,
+      partition: message.partition,
       stats: {
-        ...state.stats,
-        accumulator: state.stats.accumulator + 1,
+        ...stats,
+        accumulator: stats.accumulator + 1,
       },
-    }));
+    };
 
-    this.addMessage(message);
+    this.flushBatchedUpdates();
   }
+
+  flushBatchedUpdates = debounce(() => {
+    this.setState(this.batchedUpdates);
+    this.batchedUpdates = undefined;
+  }, 100, { maxWait: 500 });
 
   onConsumerError = (err): void => {
     this.addLog(err);
@@ -152,7 +160,6 @@ export class ConsumerDashboard extends React.Component<ConsumerDashboardProps, C
     this.addLog(line);
   }
 
-  // TODO: make these prompts inside the render()?
   onConsumerRebalancing = (): void => {
     this.prompt && this.prompt.detach();
     this.prompt = blessed.message({
@@ -167,7 +174,6 @@ export class ConsumerDashboard extends React.Component<ConsumerDashboardProps, C
     this.prompt.display('Consumer is rebalancing...', 0);
   }
 
-  // TODO: make these prompts inside the render()?
   onConsumerRebalanced = (): void => {
     this.prompt && this.prompt.detach();
     this.prompt = blessed.message({
@@ -183,45 +189,49 @@ export class ConsumerDashboard extends React.Component<ConsumerDashboardProps, C
   }
 
   updateStats = (): void => {
-    this.setState(state => {
-      const newStats: TimeStats = {
-        ...state.stats,
-        entries: [...state.stats.entries],
-      };
+    const newStats: TimeStats = {
+      ...this.state.stats,
+      entries: [...this.state.stats.entries],
+    };
 
-      const now = Date.now();
+    const now = Date.now();
 
-      if ((now - newStats.time) >= 1000) {
-        newStats.entries.push({
-          time: now,
-          messages: newStats.accumulator,
-        });
+    if ((now - newStats.time) >= 1000) {
+      newStats.entries.push({
+        time: now,
+        messages: newStats.accumulator,
+      });
 
-        newStats.cur = newStats.accumulator;
-        if (newStats.accumulator > newStats.max) {
-          newStats.max = newStats.accumulator;
-        }
-
-        if (newStats.entries.length > 6) {
-          newStats.entries.shift();
-        }
-
-        newStats.time = now;
-        newStats.accumulator = 0;
+      newStats.cur = newStats.accumulator;
+      if (newStats.accumulator > newStats.max) {
+        newStats.max = newStats.accumulator;
       }
 
-      if (newStats.entries.length > 0 && newStats.max > 0) {
-        const lastEntry = newStats.entries[newStats.entries.length - 1];
-        newStats.perc = lastEntry.messages * 100 / newStats.max;
+      if (newStats.entries.length > 6) {
+        newStats.entries.shift();
       }
 
-      return { stats: newStats };
-    });
+      newStats.time = now;
+      newStats.accumulator = 0;
+    }
+
+    if (newStats.entries.length > 0 && newStats.max > 0) {
+      const lastEntry = newStats.entries[newStats.entries.length - 1];
+      newStats.perc = lastEntry.messages * 100 / newStats.max;
+    }
+
+    this.setState({ stats: newStats });
   }
 
   setScreen = (componentType: React.ComponentType<any>) => {
     if (componentType !== this.state.currentScreen) {
       this.setState({ currentScreen: componentType });
+    }
+  }
+
+  clearMessages = () => {
+    if (this.state.messages.length) {
+      this.setState({ messages: [] });
     }
   }
 
@@ -232,11 +242,13 @@ export class ConsumerDashboard extends React.Component<ConsumerDashboardProps, C
       autoCommandKeys: false,
       style: {
         selected: {
-          bg: '#304d50',
+          fg: '#000000',
+          bg: '#ffffff',
           bold: true,
         },
         item: {
-          bg: '#304d50',
+          fg: '#000000',
+          bg: '#ffffff',
           bold: true,
         },
       },
@@ -248,6 +260,10 @@ export class ConsumerDashboard extends React.Component<ConsumerDashboardProps, C
         Messages: {
           keys: ['2'],
           callback: () => this.setScreen(ConsumerMessagesScreen),
+        },
+        Clear: {
+          keys: ['c'],
+          callback: () => this.clearMessages(),
         },
         Quit: {
           keys: ['q'],
@@ -270,7 +286,7 @@ export class ConsumerDashboard extends React.Component<ConsumerDashboardProps, C
 
   getConsumerMessagesScreenProps() {
     return {
-      currentOffset: this.currentOffset,
+      currentOffset: this.state.currentOffset,
       maxMessages: this.maxMessages,
       maxLogEntries: this.maxLogEntries,
       onMessageSelect: this.onMessageSelect,
@@ -285,7 +301,7 @@ export class ConsumerDashboard extends React.Component<ConsumerDashboardProps, C
   getMessageDetailsScreenProps() {
     const details = this.getMessageDetails();
     return {
-      messageLines: details ? details.lines : undefined,
+      messageLines: details ? details.lines : [],
     };
   }
 
@@ -295,28 +311,34 @@ export class ConsumerDashboard extends React.Component<ConsumerDashboardProps, C
       data: [
         ['Mode', 'Consumer'],
         ['Kafka Broker', this.consumer.brokerHost ],
-        ['Zookeeper', this.consumer.zookeeperHost ],
         ['Consumer Group', this.consumer.consumerGroup ],
-        ['Topic', this.consumer.topic],
-        ['Partition', this.partition ],
-        ['Partition Offset', this.currentOffset ],
+        ['Topics', this.consumer.topics.join(', ')],
+        ['Partition', this.state.partition ],
+        ['Partition Offset', this.state.currentOffset ],
         ['Current Rate', this.state.stats.cur + ' msg/s' ],
+        ['pid', process.pid],
       ],
     };
   }
 
   render() {
+    const statusHidden = this.state.currentScreen !== StatusScreen;
+    const consumerMessagesHidden = this.state.currentScreen !== ConsumerMessagesScreen;
+    const messageDetailsHidden = this.state.currentScreen !== MessageDetailsScreen;
     return (
       <>
-        <element hidden={this.state.currentScreen !== StatusScreen}>
-          <StatusScreen {...this.getConsumerStatusScreenProps()}/>
-        </element>
-        <element hidden={this.state.currentScreen !== ConsumerMessagesScreen}>
-          <ConsumerMessagesScreen {...this.getConsumerMessagesScreenProps()}/>
-        </element>
-        {/* <element hidden={this.state.currentScreen !== MessageDetailsScreen}>
-          <MessageDetailsScreen {...this.getMessageDetailsScreenProps()}/>
-        </element> */}
+        <StatusScreen
+          {...this.getConsumerStatusScreenProps()}
+          hidden={statusHidden}
+        />
+        <ConsumerMessagesScreen
+          {...this.getConsumerMessagesScreenProps()}
+          hidden={consumerMessagesHidden}
+        />
+        <MessageDetailsScreen
+          {...this.getMessageDetailsScreenProps()}
+          hidden={messageDetailsHidden}
+        />
       </>
     );
   }
