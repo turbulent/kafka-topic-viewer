@@ -2,6 +2,8 @@
 
 CLI program to visualize a Kafka Topic
 
+**This repository is currently a WIP**
+
 |            |                                                                |
 | ---------- | -------------------------------------------------------------- |
 | Typescript | Best-Practive Typescript language configuration                |
