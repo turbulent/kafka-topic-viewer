@@ -1,7 +1,7 @@
 {
-  "name": "ts-kafka-topic-client",
+  "name": "ts-kafka-viewer",
   "version": "1.0.0",
-  "description": "CLI program to test Kafka with Node",
+  "description": "CLI program to visualize a Kafka Topic",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "author": "b@turbulent.ca",
@@ -11,7 +11,7 @@
     "url": "https://gitlab.turbulent.ca/turbulent/ts-kafka-node.git"
   },
   "bin": {
-    "ts-kafka-test": "dist/index.js"
+    "kafka-topic-viewer": "dist/index.js"
   },
   "publishConfig": {
     "registry": "https://npm.turbulent.ca"
