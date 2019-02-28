@@ -1,5 +1,5 @@
 {
-  "name": "ts-kafka-viewer",
+  "name": "kafka-topic-viewer",
   "version": "1.0.0",
   "description": "CLI program to visualize a Kafka Topic",
   "main": "dist/index.js",
