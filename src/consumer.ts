@@ -5,6 +5,12 @@ import { EventEmitter } from 'events';
 
 type ConsumerEvents = 'message' | 'log' | 'rebalancing' | 'rebalanced';
 
+export interface KafkaProducerConfig {
+  brokerHost: string;
+  consumerGroup: string;
+  topics: string[];
+}
+
 export declare interface KafkaConsumer extends EventEmitter {
   on(event: 'message', listener: (data: any) => any): this;
   on(event: 'sendError', listener: (err: any) => any): this;
@@ -15,13 +21,15 @@ export declare interface KafkaConsumer extends EventEmitter {
 
 export class KafkaConsumer extends EventEmitter {
   private consumer!: ConsumerGroup;
+  public brokerHost: string;
+  public consumerGroup: string;
+  public topics: string[];
 
-  constructor(
-    public kafkaHost: string,
-    public zookeeperHost: string,
-    public consumerGroup: string,
-    public topic: string) {
-      super();
+  constructor(config: KafkaProducerConfig) {
+    super();
+    this.brokerHost = config.brokerHost,
+    this.consumerGroup = config.consumerGroup;
+    this.topics = config.topics;
   }
 
   initialize = () => {
@@ -29,13 +37,12 @@ export class KafkaConsumer extends EventEmitter {
     this.emit('log', 'Initializing');
 
     this.consumer = new ConsumerGroup({
-      host: this.zookeeperHost,
-      kafkaHost: this.kafkaHost,
+      kafkaHost: this.brokerHost,
       groupId: this.consumerGroup,
       sessionTimeout: 15000,
       protocol: ['roundrobin'],
       fromOffset: 'earliest',
-    }, [ this.topic ]);
+    }, this.topics);
 
     this.consumer.client.on('connect', this.onClientConnect);
     this.consumer.client.on('error', this.onClientError);

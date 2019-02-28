@@ -1,13 +1,13 @@
-# ts-naked
+# kafka-topic-viewer
 
-This is a starter project for a Typescript node project. It comes loaded with:
+CLI program to visualize a Kafka Topic
 
-|  |  |
-| --- | --- |
-| Typescript | Best-Practive Typescript language configuration |
-| Linting | Linting and code style with TSLint |
-| Jest | Unit testing and watching with Jest |
-| CI | Gitlab CI base configuration for test and coverage integration |
+|            |                                                                |
+| ---------- | -------------------------------------------------------------- |
+| Typescript | Best-Practive Typescript language configuration                |
+| Linting    | Linting and code style with TSLint                             |
+| Jest       | Unit testing and watching with Jest                            |
+| CI         | Gitlab CI base configuration for test and coverage integration |
 
 ## Getting Started
 
@@ -23,10 +23,10 @@ npm install
 
 ## Running the tests
 
-| Command | Description |
-| --- | --- |
-| npm run test | Run all tests |
-| npm run test:cov | Run all tests and report coverage |
+| Command            | Description                        |
+| ------------------ | ---------------------------------- |
+| npm run test       | Run all tests                      |
+| npm run test:cov   | Run all tests and report coverage  |
 | npm run test:watch | Run tests based on git differences |
 
 ### Linting and code style
@@ -35,8 +35,8 @@ Please follow linter errors are reported by tslint and fix accordingly when cont
 
 ## Built With
 
-* [Typescript](https://www.typescriptlang.org/) - Language
-* [Jest](https://facebook.github.io/jest/) - Testing suite
+- [Typescript](https://www.typescriptlang.org/) - Language
+- [Jest](https://facebook.github.io/jest/) - Testing suite
 
 ## Versioning
 

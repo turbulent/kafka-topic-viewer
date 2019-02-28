@@ -16,7 +16,8 @@
     "outDir": "./dist",
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "baseUrl": "./"
+    "baseUrl": "./",
+    "jsx": "react"
   },
   "include": [
     "src/**/*"

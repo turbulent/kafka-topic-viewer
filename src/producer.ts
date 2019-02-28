@@ -10,6 +10,13 @@ import { EventEmitter } from 'events';
 
 type ProducerEvents = 'message' | 'sendError' | 'log';
 
+export interface KafkaProducerConfig {
+  brokerHost: string;
+  topic: string;
+  partitions: number;
+  rate: number;
+}
+
 export declare interface KafkaProducer extends EventEmitter {
   on(event: 'message', listener: (data: any) => any): this;
   on(event: 'sendError', listener: (err: any) => any): this;
@@ -20,21 +27,24 @@ export declare interface KafkaProducer extends EventEmitter {
 export class KafkaProducer extends EventEmitter {
   private client!: KafkaClient;
   private producer!: Producer;
+  public brokerHost: string;
+  public topic: string;
+  public partitions: number;
+  public rate: number;
   public partitionsIds!: number[];
 
-  constructor(
-    public kafkaHost: string,
-    public zookeeperHost: string,
-    public topic: string,
-    public partitions: number,
-    public rate: number) {
-      super();
-      this.partitionsIds = (new Array(this.partitions)).fill(1).map((_e, i) => i);
+  constructor(config: KafkaProducerConfig) {
+    super();
+    this.brokerHost = config.brokerHost;
+    this.topic = config.topic;
+    this.partitions = config.partitions;
+    this.rate = config.rate;
+    this.partitionsIds = Array.from(Array(this.partitions)).map((_, i) => i);
   }
 
   initialize = () => {
     this.client = new KafkaClient({
-      kafkaHost: this.kafkaHost,
+      kafkaHost: this.brokerHost,
       autoConnect: true,
       connectTimeout: 5,
       requestTimeout: 10000,
