@@ -6,9 +6,6 @@
   "types": "dist/index.d.ts",
   "author": "b@turbulent.ca",
   "license": "Apache-2.0",
-  "publishConfig": {
-    "registry": "https://npm.turbulent.ca"
-  },
   "tags": [
     "typescript"
   ],
