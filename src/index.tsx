@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 import * as commander from "commander";
 import * as React from "react";
 import * as blessed from "blessed";
@@ -27,7 +28,7 @@ export class CLIProgram {
   }
 
   setTitle(text: string) {
-    this.screen.title = `Kafka Topic Client -- ${text}`;
+    this.screen.title = `Kafka Topic Viewer -- ${text}`;
   }
 
   setupCLI = () => {
