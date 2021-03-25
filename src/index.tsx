@@ -73,7 +73,7 @@ export class CLIProgram {
         "-t, --topics <topics>",
         "Specify the topic(s) on which to consume messages",
         this.splitTopics,
-        "test.sc.lorem"
+        ["test.sc.lorem"]
       )
       .action(this.onConsumer);
   };
