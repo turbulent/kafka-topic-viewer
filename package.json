@@ -18,10 +18,10 @@
     "fast-deep-equal": "^2.0.1",
     "kafka-node": "^2.6.1",
     "lodash.debounce": "^4.0.8",
-    "marked": "^0.5.2",
+    "marked": "^2.0.1",
     "pkg": "^4.3.7",
     "react": "^16.8.3",
-    "react-blessed": "^0.3.0",
+    "react-blessed": "^0.7.2",
     "react-blessed-contrib": "^0.2.1",
     "react-devtools-core": "^3.6.0",
     "reflect-metadata": "^0.1.13",
@@ -31,16 +31,13 @@
   "devDependencies": {
     "@types/blessed": "^0.1.10",
     "@types/faker": "^4.1.5",
-    "@types/jest": "^23.3.14",
     "@types/kafka-node": "^2.0.7",
     "@types/node": "^10.12.27",
-    "jest": "^23.1.0",
+    "jest": "^26.6.3",
     "nodemon": "^1.18.10",
     "rimraf": "^2.6.3",
-    "ts-jest": "^22.4.6",
     "ts-node": "^6.1.1",
-    "tslint": "^5.13.0",
-    "typescript": "^2.9.1"
+    "typescript": "^4.2.3"
   },
   "bin": {
     "kafka-topic-viewer": "dist/index.js"

@@ -20,16 +20,16 @@ These instructions will get you a copy of the project up and running on your loc
 Install dependencies for development and environment:
 
 ```
-npm install
+yarn install
 ```
 
 ## Running the tests
 
-| Command            | Description                        |
-| ------------------ | ---------------------------------- |
-| npm run test       | Run all tests                      |
-| npm run test:cov   | Run all tests and report coverage  |
-| npm run test:watch | Run tests based on git differences |
+| Command         | Description                        |
+| --------------- | ---------------------------------- |
+| yarn test       | Run all tests                      |
+| yarn test:cov   | Run all tests and report coverage  |
+| yarn test:watch | Run tests based on git differences |
 
 ### Linting and code style
 
